@@ -4,7 +4,7 @@ module parameters
     use io
 
     ! DO NOT EDIT ABOVE THIS LINE
-    character(7), parameter :: revision = "b818683"
+    character(7), parameter :: revision = "6846594"
 
     !# Geometry & discretization
     integer(i4) :: &
@@ -69,8 +69,9 @@ module parameters
     
     !# Termination
     logical  :: terminate_laminar = .true. ! terminate on laminarization
-    real(dp) :: relerr_lam = 0.1_dp ! conclude laminarization if stats within
-                                    ! relerr_lam of those of laminar
+    real(dp) :: relerr_lam = 0.1_dp, & ! conclude laminarization if stats within
+                                       ! relerr_lam of those of laminar
+                abszero_lam = 1.0e-8_dp ! if MHD, comparing energy to abszero_lam
     real(sp) :: wall_clock_limit = -1.0_sp
     integer(i4) :: i_finish = -1 ! time step limit
     
@@ -119,7 +120,7 @@ module parameters
     namelist /time_stepping/ dt, implicitness, steptol, ncorr, adaptive_dt, &
                              dtmax, courant_target, integrate_invariant, &
                              poincare, eps_poincare
-    namelist /termination/ terminate_laminar, relerr_lam, wall_clock_limit, i_finish
+    namelist /termination/ terminate_laminar, relerr_lam, abszero_lam, wall_clock_limit, i_finish
     namelist /debugging/ log_divergence, divergence_th, shapiro_qalpha, shapiro_qbeta, shapiro_qgamma
     namelist /symmetries/ Rxy, Ry, Rz, Sx, Sy, slice
     namelist /lyapunov/ compute_lyap, lyap_normalize, i_lyap, eps_lyap, trans_lyap, k_cutoff
@@ -353,6 +354,7 @@ module parameters
 
         write(out, *) 'terminate_laminar = ', terminate_laminar
         write(out, *) 'relerr_lam = ', relerr_lam
+        if (MHD) write(out, *) 'abszero_lam = ', abszero_lam
         write(out, *) 'wall_clock_limit = ', wall_clock_limit
         write(out, *) 'i_finish = ', i_finish
 
