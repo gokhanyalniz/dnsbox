@@ -4,7 +4,7 @@ module parameters
     use io
 
     ! DO NOT EDIT ABOVE THIS LINE
-    character(7), parameter :: revision = "fc4304a"
+    character(7), parameter :: revision = "889754f"
 
     !# Geometry & discretization
     integer(i4) :: &
@@ -283,6 +283,12 @@ module parameters
         ekin_lam    = 1.0_dp / 4.0_dp
         powerin_lam = PI**2 / (8 * Re)
         dissip_lam  = powerin_lam
+
+        if (MHD) then
+            ekin_lam = ekin_lam * (PI**2 / (4*Ha**2 + PI**2))**2
+            powerin_lam = powerin_lam * (PI**2 / (4*Ha**2 + PI**2))**2
+            dissip_lam = dissip_lam * (PI**2 / (4*Ha**2 + PI**2))**2
+        end if
         
         write(out, '(79(''=''))')   
 

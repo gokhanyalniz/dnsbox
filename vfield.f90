@@ -200,22 +200,29 @@ module vfield
 
     subroutine vfield_laminar(vfieldk)
         complex(dpc), intent(out) :: vfieldk(:, :, :, :)
+        real(dp) :: coefficient
         
         vfieldk(:,:,:,1:3) = 0
+        if (MHD) then
+            coefficient = PI**2 / (4*Ha**2 + PI**2)
+        else
+            coefficient = 1.0_dp
+        end if
+
         if (ix_zero /= -1 .and. iy_force /= -1) then
             if (tilting) then
                 if (forcing == 1) then
-                    vfieldk(ix_zero,iy_force,1,1)%im = -cos(tilt_angle * PI / 180.0_dp) * 0.5_dp
-                    vfieldk(ix_zero,iy_force,1,3)%im = -sin(tilt_angle * PI / 180.0_dp) * 0.5_dp
+                    vfieldk(ix_zero,iy_force,1,1)%im = -cos(tilt_angle * PI / 180.0_dp) * 0.5_dp * coefficient
+                    vfieldk(ix_zero,iy_force,1,3)%im = -sin(tilt_angle * PI / 180.0_dp) * 0.5_dp * coefficient
                 elseif (forcing == 2) then
-                    vfieldk(ix_zero,iy_force,1,1)%re = cos(tilt_angle * PI / 180.0_dp) * 0.5_dp
-                    vfieldk(ix_zero,iy_force,1,3)%re = sin(tilt_angle * PI / 180.0_dp) * 0.5_dp
+                    vfieldk(ix_zero,iy_force,1,1)%re = cos(tilt_angle * PI / 180.0_dp) * 0.5_dp * coefficient
+                    vfieldk(ix_zero,iy_force,1,3)%re = sin(tilt_angle * PI / 180.0_dp) * 0.5_dp * coefficient
                 endif
             else
                 if (forcing == 1) then
-                    vfieldk(ix_zero,iy_force,1,1)%im = -0.5_dp
+                    vfieldk(ix_zero,iy_force,1,1)%im = -0.5_dp * coefficient
                 elseif (forcing == 2) then
-                    vfieldk(ix_zero,iy_force,1,1)%re = 0.5_dp
+                    vfieldk(ix_zero,iy_force,1,1)%re = 0.5_dp * coefficient
                 endif
             end if
         endif

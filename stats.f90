@@ -29,6 +29,8 @@ module stats
         complex(dpc), intent(in)  :: vfieldk(:, :, :, :)
         real(dp) :: my_powerin
 
+        ! TODO: Add the power input due to the magnetic field
+
         my_powerin = 0
         if (ix_zero /= -1) then
             if (tilting) then

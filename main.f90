@@ -92,19 +92,38 @@ program main
             call stats_write
 
             ! Stop if laminarized
-            if (my_id==0 .and. terminate_laminar .and. .not. MHD) then
+            if (my_id==0 .and. terminate_laminar) then
 
-                e_diff = abs(ekin - ekin_lam)/ekin_lam
-                input_diff = abs(powerin - powerin_lam)/powerin_lam
-                diss_diff = abs(dissip - dissip_lam )/dissip_lam 
-                
-                if (e_diff < relerr_lam .and. &
-                    input_diff < relerr_lam .and. diss_diff < relerr_lam) then
-                    kill_switch = .true.
-                    write(out, *) "Laminarized, stopping."
-                    open(newunit=laminarized_ch,file='LAMINARIZED',position='append')
-                    write(laminarized_ch,*) time
-                    close(laminarized_ch)
+                if (.not. MHD) then
+
+                    e_diff = abs(ekin - ekin_lam)/ekin_lam
+                    input_diff = abs(powerin - powerin_lam)/powerin_lam
+                    diss_diff = abs(dissip - dissip_lam )/dissip_lam 
+                    
+                    if (e_diff < relerr_lam .and. &
+                        input_diff < relerr_lam .and. diss_diff < relerr_lam) then
+                        kill_switch = .true.
+                        write(out, *) "Laminarized, stopping."
+                        open(newunit=laminarized_ch,file='LAMINARIZED',position='append')
+                        write(laminarized_ch,*) time
+                        close(laminarized_ch)
+                    end if
+
+                else
+
+                    e_diff = abs(ekin - ekin_lam)/ekin_lam
+                    ! input not correct for MHD yet
+                    ! input_diff = abs(powerin - powerin_lam)/powerin_lam
+                    diss_diff = abs(dissip - dissip_lam )/dissip_lam 
+                    
+                    if (e_diff < relerr_lam .and. diss_diff < relerr_lam) then
+                        kill_switch = .true.
+                        write(out, *) "Laminarized, stopping."
+                        open(newunit=laminarized_ch,file='LAMINARIZED',position='append')
+                        write(laminarized_ch,*) time
+                        close(laminarized_ch)
+                    end if
+
                 end if
             end if
 
