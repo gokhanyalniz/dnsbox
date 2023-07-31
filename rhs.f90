@@ -31,6 +31,9 @@ module rhs
             rhs_model_vfieldk(:, :, :, :), &
             rhs_div_model_vfieldk(:, :, :, :)
 
+        ! MHD fields
+        complex(dpc), allocatable :: current(:, :, :, :)
+
         _indices
         _indicess
 
@@ -45,7 +48,11 @@ module rhs
                 allocate(rhs_div_model_vfieldk(nx_perproc, ny_half, nz, 3))
 
         end if
-        
+
+        if (MHD .and. .not. allocated(current)) then
+            allocate(current(nx_perproc, ny_half, nz, 3))
+        end if
+    
         ! get 6 velocity products:
         _loop_phys_begin
 
@@ -96,7 +103,7 @@ module rhs
             end do
         end if    
 
-        _loop_spec_begin                       
+        _loop_spec_begin                  
             ! Nonlinear term:
 
             ! advect(j) = - F{u_i d_i u_j}
@@ -155,6 +162,34 @@ module rhs
                 
             fvel_vfieldk(:, :, :, 3) = fvel_vfieldk(:, :, :, 3) &
                 - sigma_R * (vel_vfieldk(:, :, :, 3) - laminar_vfieldk(:, :, :, 3))             
+        end if
+
+        if (MHD) then
+            _loop_spec_begin
+
+            ! Solving the scalar potential part (- \nabla \phi) of the current, it's solved like pressure is solved above
+            do n = 1, 3
+                current(ix,iy,iz,n) = -(vel_vfieldk(ix,iy,iz,1) * kz(iz) - vel_vfieldk(ix,iy,iz,3) * kx(ix)) * vfield_coordinatek(ix,iy,iz,n) * inverse_laplacian(ix,iy,iz)
+            end do
+
+            _loop_spec_end
+
+            ! Adding the Biot-Savart part (\vec{u} \times \hat{e}_B), *strictly wall-normal magnetic field*
+
+            ! -w \hat{x}
+            current(:,:,:,1) = current(:,:,:,1) - vel_vfieldk(:,:,:,3)
+            ! u \hat{z}
+            current(:,:,:,3) = current(:,:,:,3) + vel_vfieldk(:,:,:,1)
+
+            ! Adding to the RHS the resulting forcing term
+            ! \vec{F}_B = \frac{Ha^2}{Re} (\current \times \hat{e}_B)
+
+            ! -\current_z \hat{x}
+            fvel_vfieldk(:, :, :, 1) = fvel_vfieldk(:, :, :, 1) - current(:, :, :, 3)
+
+            ! \current_x \hat{z}
+            fvel_vfieldk(:, :, :, 3) = fvel_vfieldk(:, :, :, 3) + current(:, :, :, 1)
+
         end if
 
     end subroutine rhs_nonlin_term
