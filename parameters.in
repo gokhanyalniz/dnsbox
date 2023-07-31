@@ -62,7 +62,6 @@ eps_poincare   = 1.0e-9
 &termination
 terminate_laminar = T     ! Terminate (T) or not (F) when laminarized
 relerr_lam = 0.1          ! relerr for deciding laminar
-abszero_lam = 1e-8       ! if MHD, comparing energy to abszero_lam
 wall_clock_limit = -1     ! if negative, unlimited (seconds)
 i_finish = -1             ! If positive, the run will stop after itime=i_finish
 /
