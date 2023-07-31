@@ -185,10 +185,10 @@ module rhs
             ! \vec{F}_B = \frac{Ha^2}{Re} (\current \times \hat{e}_B)
 
             ! -\current_z \hat{x}
-            fvel_vfieldk(:, :, :, 1) = fvel_vfieldk(:, :, :, 1) - current(:, :, :, 3)
+            fvel_vfieldk(:, :, :, 1) = fvel_vfieldk(:, :, :, 1) - current(:, :, :, 3) * (Ha**2 / Re)
 
             ! \current_x \hat{z}
-            fvel_vfieldk(:, :, :, 3) = fvel_vfieldk(:, :, :, 3) + current(:, :, :, 1)
+            fvel_vfieldk(:, :, :, 3) = fvel_vfieldk(:, :, :, 3) + current(:, :, :, 1) * (Ha**2 / Re)
 
         end if
 
