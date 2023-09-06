@@ -268,6 +268,12 @@ module parameters
         if (Ha > small) then 
             write(out, *) 'Ha = ', Ha
             MHD = .true.
+
+            if (forcing /= 2) then
+                write(out,*) 'MHD is intended only for forcing = 2.'
+                flush(out)
+                error stop
+            end if
         end if
                 
         if (LES .and. &

@@ -936,13 +936,18 @@ def tilt_state(state, tilt_angle):
     return stateout
 
 
-def laminar(forcing, nx, ny_half, nz, tilt_angle=0.0):
+def laminar(forcing, nx, ny_half, nz, tilt_angle=0.0, Ha=0):
+
+    coefficient = 1
+    if abs(Ha) > 0:
+        coefficient *= np.pi**2 / (4*Ha**2 + np.pi**2)
+
 
     state = np.zeros((nx, ny_half, nz, 3), dtype=np.complex128)
     if forcing == 1:
-        state[0, qF, 0, 0] = -1j * 0.5
+        state[0, qF, 0, 0] = -1j * 0.5 * coefficient
     elif forcing == 2:
-        state[0, qF, 0, 0] = 0.5
+        state[0, qF, 0, 0] = 0.5 * coefficient
 
     if abs(tilt_angle) > 0:
         state = tilt_state(state, tilt_angle)
