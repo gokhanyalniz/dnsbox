@@ -31,7 +31,7 @@ def main():
     dnscontinue(**args)
 
 
-def dnscontinue(rundir, i_finish_plus = 0, script = None):
+def dnscontinue(rundir, i_finish_plus=None, script=None):
 
     rundir = Path(rundir)
 
@@ -42,7 +42,8 @@ def dnscontinue(rundir, i_finish_plus = 0, script = None):
     parameters["initiation"]["ic"] = i_final_state
     itime_final = i_final_state * parameters["output"]["i_save_fields"]
     parameters["initiation"]["i_start"] = itime_final
-    parameters["termination"]["i_finish"] += i_finish_plus
+    if i_finish_plus is not None:
+        parameters["termination"]["i_finish"] += i_finish_plus
 
     stat_file = rundir / "stat.gp"
     if Path.is_file(stat_file):
