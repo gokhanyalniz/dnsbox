@@ -189,7 +189,11 @@ program main
             time_before = time
         end if
 
-        call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
+        if (MHD) then
+            call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+        else
+            call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+        end if
 
         time = time + dt
         itime = itime + 1
@@ -244,7 +248,11 @@ program main
                             call run_exit
                         end if
 
-                        call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
+                        if (MHD) then
+                            call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+                        else
+                            call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+                        end if
                         time = time_before + dt
                         call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
                         U_poincare_next = dissip - powerin
@@ -271,7 +279,11 @@ program main
                                 dt_last = dt
                                 i_secant = 0
 
-                                call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
+                                if (MHD) then
+                                    call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+                                else
+                                    call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+                                end if
                                 time = time_before + dt
                                 call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
                                 U_poincare_next = dissip - powerin

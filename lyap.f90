@@ -10,7 +10,7 @@ module lyap
     use timestep
 
     complex(dpc), allocatable, dimension(:, :, :, :) :: &
-        lyap_vfieldk, lyap_fvfieldk
+        lyap_vfieldk, lyap_fvfieldk, lyap_current
     
     real(dp), allocatable :: lyap_vfieldxx(:, :, :, :)
 
@@ -35,6 +35,10 @@ module lyap
         allocate(lyap_vfieldk(nx_perproc, ny_half, nz, 3))
         allocate(lyap_fvfieldk, mold=lyap_vfieldk)
         allocate(lyap_vfieldxx(nyy, nzz_perproc, nxx, 3))
+
+        if (MHD) then
+            allocate(lyap_current(nx_perproc, ny_half, nz, 3))
+        end if
 
         inquire(file = 'lyap.gp', exist = lyap_exists)
         if (lyap_exists .and. my_id == 0) then
@@ -122,7 +126,11 @@ module lyap
 
         ! When this subroutine is called, lyap_vfield is one time step behind 
         ! vel_vfieldk_now, so we start off by time stepping the perturbed field
-        call timestep_precorr(lyap_vfieldxx, lyap_vfieldk, lyap_fvfieldk)
+        if (MHD) then
+            call timestep_precorr(lyap_vfieldxx, lyap_vfieldk, lyap_fvfieldk, lyap_current)
+        else
+            call timestep_precorr(lyap_vfieldxx, lyap_vfieldk, lyap_fvfieldk)
+        end if
 
         if (mod(itime, i_lyap) == 0) then
 

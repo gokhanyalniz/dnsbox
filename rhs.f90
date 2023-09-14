@@ -12,11 +12,12 @@ module rhs
 
 !==============================================================================
 
-    subroutine rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
+    subroutine rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk, cur_vfieldk)
 
         real(dp), intent(in)  :: vel_vfieldxx(:, :, :, :)
         complex(dpc), intent(in) :: vel_vfieldk(:, :, :, :)
         complex(dpc), intent(out) :: fvel_vfieldk(:, :, :, :)
+        complex(dpc), optional, intent(inout) :: cur_vfieldk(:, :, :, :)
 
         complex(dpc) :: rhs_vfieldk(nx_perproc, ny_half, nz, 6), advect(3), div
         real(dp) :: rhs_vfieldxx(nyy, nzz_perproc, nxx, 5), u_out_u(6), trace
@@ -31,9 +32,6 @@ module rhs
             rhs_model_vfieldk(:, :, :, :), &
             rhs_div_model_vfieldk(:, :, :, :)
 
-        ! MHD fields
-        complex(dpc), allocatable :: current(:, :, :, :)
-
         _indices
         _indicess
 
@@ -47,10 +45,6 @@ module rhs
             if (.not. allocated(rhs_div_model_vfieldk)) &
                 allocate(rhs_div_model_vfieldk(nx_perproc, ny_half, nz, 3))
 
-        end if
-
-        if (MHD .and. .not. allocated(current)) then
-            allocate(current(nx_perproc, ny_half, nz, 3))
         end if
     
         ! get 6 velocity products:
@@ -165,30 +159,18 @@ module rhs
         end if
 
         if (MHD) then
-            _loop_spec_begin
 
-            ! Solving the scalar potential part (- \nabla \phi) of the current, it's solved like pressure is solved above
-            do n = 1, 3
-                current(ix,iy,iz,n) = -(vel_vfieldk(ix,iy,iz,1) * kz(iz) - vel_vfieldk(ix,iy,iz,3) * kx(ix)) * vfield_coordinatek(ix,iy,iz,n) * inverse_laplacian(ix,iy,iz)
-            end do
-
-            _loop_spec_end
-
-            ! Adding the Biot-Savart part (\vec{u} \times \hat{e}_B), *strictly wall-normal magnetic field*
-
-            ! -w \hat{x}
-            current(:,:,:,1) = current(:,:,:,1) - vel_vfieldk(:,:,:,3)
-            ! u \hat{z}
-            current(:,:,:,3) = current(:,:,:,3) + vel_vfieldk(:,:,:,1)
+            ! compute the current
+            call rhs_current(vel_vfieldk, cur_vfieldk)
 
             ! Adding to the RHS the resulting forcing term
             ! \vec{F}_B = \frac{Ha^2}{Re} (\current \times \hat{e}_B)
 
             ! -\current_z \hat{x}
-            fvel_vfieldk(:, :, :, 1) = fvel_vfieldk(:, :, :, 1) - current(:, :, :, 3) * (Ha**2 / Re)
+            fvel_vfieldk(:, :, :, 1) = fvel_vfieldk(:, :, :, 1) - cur_vfieldk(:, :, :, 3) * (Ha**2 / Re)
 
             ! \current_x \hat{z}
-            fvel_vfieldk(:, :, :, 3) = fvel_vfieldk(:, :, :, 3) + current(:, :, :, 1) * (Ha**2 / Re)
+            fvel_vfieldk(:, :, :, 3) = fvel_vfieldk(:, :, :, 3) + cur_vfieldk(:, :, :, 1) * (Ha**2 / Re)
 
         end if
 
@@ -196,14 +178,47 @@ module rhs
 
 !==============================================================================
 
-    subroutine rhs_all(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
-        real(dp), intent(in)  :: vel_vfieldxx(:, :, :, :)
+    subroutine rhs_current(vel_vfieldk, cur_vfieldk)
         complex(dpc), intent(in)  :: vel_vfieldk(:, :, :, :)
-        complex(dpc), intent(out) :: fvel_vfieldk(:, :, :, :)
+        complex(dpc), intent(out) :: cur_vfieldk(:, :, :, :)
+
+        integer(i4) :: n
 
         _indices
 
-        call rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
+        _loop_spec_begin
+
+        ! Solving the scalar potential part (- \nabla \phi) of the current, it's solved like pressure is solved above
+        do n = 1, 3
+            cur_vfieldk(ix,iy,iz,n) = -(vel_vfieldk(ix,iy,iz,1) * kz(iz) - vel_vfieldk(ix,iy,iz,3) * kx(ix)) * vfield_coordinatek(ix,iy,iz,n) * inverse_laplacian(ix,iy,iz)
+        end do
+
+        _loop_spec_end
+
+        ! Adding the Biot-Savart part (\vec{u} \times \hat{e}_B), *strictly wall-normal magnetic field*
+
+        ! -w \hat{x}
+        cur_vfieldk(:,:,:,1) = cur_vfieldk(:,:,:,1) - vel_vfieldk(:,:,:,3)
+        ! u \hat{z}
+        cur_vfieldk(:,:,:,3) = cur_vfieldk(:,:,:,3) + vel_vfieldk(:,:,:,1)
+
+    end subroutine rhs_current
+
+!==============================================================================
+
+    subroutine rhs_all(vel_vfieldxx, vel_vfieldk, fvel_vfieldk, cur_vfieldk)
+        real(dp), intent(in)  :: vel_vfieldxx(:, :, :, :)
+        complex(dpc), intent(in)  :: vel_vfieldk(:, :, :, :)
+        complex(dpc), intent(out) :: fvel_vfieldk(:, :, :, :)
+        complex(dpc), optional, intent(inout) :: cur_vfieldk(:, :, :, :)
+
+        _indices
+
+        if(present(cur_vfieldk)) then
+            call rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk, cur_vfieldk)
+        else
+            call rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
+        end if
         _loop_spec_begin
             fvel_vfieldk(ix,iy,iz,1:3) = fvel_vfieldk(ix,iy,iz,1:3) &
                                     + (- laplacian(ix,iy,iz) / Re) & 

@@ -20,7 +20,8 @@ module run
     complex(dpc), allocatable, dimension(:, :, :, :) :: &
         vel_vfieldk_now, fvel_vfieldk_now, & ! u and F(u) now
         sliced_vel_vfieldk_now, & ! symmetry reduced u
-        shapiro_vfieldk ! Shapiro solution
+        shapiro_vfieldk, & ! Shapiro solution
+        current_vfieldk ! Electric current for MHD
 
     real(dp), allocatable :: vel_vfieldxx_now(:, :, :, :)
 
@@ -53,6 +54,10 @@ module run
         allocate(vel_vfieldk_now(nx_perproc, ny_half, nz, 3))
         allocate(fvel_vfieldk_now(nx_perproc, ny_half, nz, 3))
         allocate(vel_vfieldxx_now(nyy, nzz_perproc, nxx, 3))
+
+        if (MHD) then
+            allocate(current_vfieldk(nx_perproc, ny_half, nz, 3))
+        end if
  
         if (poincare) then
             allocate(vel_vfieldk_before(nx_perproc, ny_half, nz, 3))
@@ -97,7 +102,12 @@ module run
         end if
 
         call fftw_vk2x(vel_vfieldk_now, vel_vfieldxx_now)
-        call rhs_all(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
+
+        if (MHD) then
+            call rhs_all(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+        else
+            call rhs_all(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
+        end if
 
         call cpu_time(cput_start)
 

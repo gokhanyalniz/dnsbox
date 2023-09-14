@@ -21,24 +21,35 @@ module timestep
 
 !==============================================================================
 
-    subroutine timestep_precorr(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
+    subroutine timestep_precorr(vel_vfieldxx, vel_vfieldk, fvel_vfieldk, cur_vfieldk)
         
         real(dp), intent(inout) :: vel_vfieldxx(:, :, :, :)
         complex(dpc), intent(inout) :: vel_vfieldk(:, :, :, :)
         complex(dpc), intent(out) :: fvel_vfieldk(:, :, :, :)
+        complex(dpc), optional, intent(inout) :: cur_vfieldk(:, :, :, :)
 
         real(dp)     :: timestep_prefieldxx(nyy, nzz_perproc, nxx, 3)
         complex(dpc), dimension(nx_perproc, ny_half, nz, 3) :: &
             timestep_prefieldk, timestep_corfieldk, timestep_nonlinterm_next, &
             timestep_nonlinterm_prev
 
+        complex(dpc), allocatable, dimension(:, :, :, :) :: timestep_current
+
         ! semi-implicit predictor-corrector method
         _indices
         integer(i4) :: c
-        real(dp)    :: invdt, norm, error 
+        real(dp)    :: invdt, norm, error
+
+        if (MHD .and. .not. allocated(timestep_current)) then
+            allocate(timestep_current(nx_perproc, ny_half, nz, 3))
+        end if
 
         ! initial rhs
-        call rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
+        if (present(cur_vfieldk)) then
+            call rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk, cur_vfieldk)
+        else
+            call rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
+        end if
         timestep_nonlinterm_prev = fvel_vfieldk
 
         ! add the linear term to the rhs for others's use
@@ -67,7 +78,11 @@ module timestep
             call vfield_norm(timestep_prefieldk, norm, .true.)
             
             call fftw_vk2x(timestep_prefieldk, timestep_prefieldxx)
-            call rhs_nonlin_term(timestep_prefieldxx, timestep_prefieldk, timestep_nonlinterm_next)
+            if (MHD) then
+                call rhs_nonlin_term(timestep_prefieldxx, timestep_prefieldk, timestep_nonlinterm_next, timestep_current)
+            else
+                call rhs_nonlin_term(timestep_prefieldxx, timestep_prefieldk, timestep_nonlinterm_next)
+            end if
 
             ! Now we have N(n+1)^c in state(:,:,:,1:3)
             _loop_spec_begin

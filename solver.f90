@@ -512,7 +512,11 @@ module solver
         time = 0
         do itime = 0, ndts_ - 1
     
-            call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
+            if (MHD) then
+                call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+            else
+                call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+            end if
             time = time + dt
 
         end do
