@@ -29,29 +29,27 @@ module stats
         complex(dpc), intent(in)  :: vfieldk(:, :, :, :)
         real(dp) :: my_powerin
 
-        ! TODO: Add the power input due to the magnetic field
-
         my_powerin = 0
         if (ix_zero /= -1) then
             if (tilting) then
                 if (forcing == 1) then ! sine
-                    my_powerin = -cos(tilt_angle * PI / 180.0_dp) * (PI**2 / (4.0_dp * Re)) &
+                    my_powerin = -cos(tilt_angle * PI / 180.0_dp) * (amp / (4.0_dp * Re)) &
                                     * vfieldk(ix_zero,iy_force,1,1)%im &
-                                 -sin(tilt_angle * PI / 180.0_dp) * (PI**2 / (4.0_dp * Re)) &
+                                 -sin(tilt_angle * PI / 180.0_dp) * (amp / (4.0_dp * Re)) &
                                     * vfieldk(ix_zero,iy_force,1,3)%im
                 elseif (forcing == 2) then ! cosine
                     ! This may require thinking in the presence of drag
-                    my_powerin = cos(tilt_angle * PI / 180.0_dp) * (PI**2 / (4.0_dp * Re)) &
+                    my_powerin = cos(tilt_angle * PI / 180.0_dp) * (amp / (4.0_dp * Re)) &
                                                         * vfieldk(ix_zero,iy_force,1,1)%re  &
-                                 + sin(tilt_angle * PI / 180.0_dp) * (PI**2 / (4.0_dp * Re)) &
+                                 + sin(tilt_angle * PI / 180.0_dp) * (amp / (4.0_dp * Re)) &
                                                         * vfieldk(ix_zero,iy_force,1,3)%re
                 end if
             else
                 if (forcing == 1) then ! sine
-                    my_powerin = -(PI**2 / (4.0_dp * Re)) * vfieldk(ix_zero,iy_force,1,1)%im
+                    my_powerin = -(amp / (4.0_dp * Re)) * vfieldk(ix_zero,iy_force,1,1)%im
                 elseif (forcing == 2) then ! cosine
                     ! This may require thinking in the presence of drag
-                    my_powerin = (PI**2 / (4.0_dp * Re)) * vfieldk(ix_zero,iy_force,1,1)%re 
+                    my_powerin = (amp / (4.0_dp * Re)) * vfieldk(ix_zero,iy_force,1,1)%re 
                 end if
             end if
         end if
@@ -76,6 +74,9 @@ module stats
         ! Dissipation
         call vfield_enstrophy(vfieldk, enstrophy, .false.)
         dissip = 2.0_dp * enstrophy / Re
+
+        ! TODO: Add the power input / dissipation due to the magnetic field
+        ! first term is strictly negative, no idea about the potential term yet
 
         ! norm of rhs
         call vfield_norm(fvfieldk,norm_rhs,.false.)
