@@ -104,6 +104,9 @@ module parameters
     ! laminar values
     real(dp) :: ekin_lam, powerin_lam, dissip_lam
 
+    ! forcing coefficient
+    real(dp) :: amp
+
     ! Given 3x3 symmetric matrix M, entries M_{ij} will be used
     integer(i4), parameter, dimension(6) :: isym = (/1, 1, 1, 2, 2, 3/), &
                                             jsym = (/1, 2, 3, 2, 3, 3/)
@@ -265,6 +268,7 @@ module parameters
             rayleigh_friction = .true.
         end if
 
+        amp = PI**2
         if (Ha > small) then 
             write(out, *) 'Ha = ', Ha
             MHD = .true.
@@ -274,6 +278,8 @@ module parameters
                 flush(out)
                 error stop
             end if
+
+            amp = amp + 4*Ha**2
         end if
                 
         if (LES .and. &
@@ -289,12 +295,6 @@ module parameters
         ekin_lam    = 1.0_dp / 4.0_dp
         powerin_lam = PI**2 / (8 * Re)
         dissip_lam  = powerin_lam
-
-        if (MHD) then
-            ekin_lam = ekin_lam * (PI**2 / (4*Ha**2 + PI**2))**2
-            powerin_lam = powerin_lam * (PI**2 / (4*Ha**2 + PI**2))**2
-            dissip_lam = dissip_lam * (PI**2 / (4*Ha**2 + PI**2))**2
-        end if
         
         write(out, '(79(''=''))')   
 
