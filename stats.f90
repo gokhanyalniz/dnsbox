@@ -10,7 +10,8 @@ module stats
     use rhs
     use timestep
 
-    real(dp) :: ekin, powerin, enstrophy, dissip, norm_rhs
+    real(dp) :: ekin, powerin, enstrophy, dissip, norm_rhs, &
+                dissip_mhd
 
     integer(i4) :: stats_stat_ch, stats_specx_ch, stats_specy_ch, &
         stats_specz_ch
@@ -71,12 +72,15 @@ module stats
         ! Power input
         call stats_compute_powerin(vfieldk)
                 
-        ! Dissipation
+        ! Viscous dissipation
         call vfield_enstrophy(vfieldk, enstrophy, .false.)
         dissip = 2.0_dp * enstrophy / Re
 
-        ! TODO: Add the power input / dissipation due to the magnetic field
-        ! first term is strictly negative, no idea about the potential term yet
+        ! MHD dissipation
+        call vfield_dissip_mhd(vfieldk, dissip_mhd, .false.)
+        dissip = dissip + dissip_mhd
+
+        ! TODO: Add the power due to the potential term of MHD
 
         ! norm of rhs
         call vfield_norm(fvfieldk,norm_rhs,.false.)

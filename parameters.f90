@@ -4,7 +4,7 @@ module parameters
     use io
 
     ! DO NOT EDIT ABOVE THIS LINE
-    character(7), parameter :: revision = "5048ef0"
+    character(7), parameter :: revision = "cb41d34"
 
     !# Geometry & discretization
     integer(i4) :: &
@@ -293,7 +293,7 @@ module parameters
 
         ! compute laminar values
         ekin_lam    = 1.0_dp / 4.0_dp
-        powerin_lam = PI**2 / (8 * Re)
+        powerin_lam = amp / (8 * Re)
         dissip_lam  = powerin_lam
         
         write(out, '(79(''=''))')   
