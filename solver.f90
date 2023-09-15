@@ -515,7 +515,7 @@ module solver
             if (MHD) then
                 call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
             else
-                call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+                call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
             end if
             time = time + dt
 

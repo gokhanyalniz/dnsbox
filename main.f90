@@ -69,7 +69,11 @@ program main
 
         if (i_print_stats > 0 .and. mod(itime, i_print_stats) == 0) then
             
-            call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
+            if (MHD) then
+                call stats_compute(vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+            else
+                call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
+            end if
 
             if (integrate_invariant .and. itime > i_start) call solver_averaging_update(vel_vfieldk_now)
 
@@ -175,7 +179,11 @@ program main
             
             if ((i_print_stats > 0 .and. .not. (mod(itime, i_print_stats) == 0)) &
                     .or. i_print_stats <= 0) then
-                call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
+                if (MHD) then
+                    call stats_compute(vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+                else
+                    call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
+                end if
             end if
         
             U_poincare = dissip - powerin
@@ -192,7 +200,7 @@ program main
         if (MHD) then
             call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
         else
-            call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+            call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
         end if
 
         time = time + dt
@@ -200,7 +208,11 @@ program main
 
         if (poincare) then
             ! Check if there is a Poincare section intersection         
-            call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
+            if (MHD) then
+                call stats_compute(vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+            else
+                call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
+            end if
             U_poincare_next = dissip - powerin
             call MPI_BCAST(U_poincare_next, 1, MPI_REAL8, 0, MPI_COMM_WORLD, mpi_err)
             
@@ -251,10 +263,14 @@ program main
                         if (MHD) then
                             call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
                         else
-                            call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+                            call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
                         end if
                         time = time_before + dt
-                        call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
+                        if (MHD) then
+                            call stats_compute(vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+                        else
+                            call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
+                        end if
                         U_poincare_next = dissip - powerin
                         call MPI_BCAST(U_poincare_next, 1, MPI_REAL8, 0, MPI_COMM_WORLD, mpi_err)
                         
@@ -282,7 +298,7 @@ program main
                                 if (MHD) then
                                     call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
                                 else
-                                    call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+                                    call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
                                 end if
                                 time = time_before + dt
                                 call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)

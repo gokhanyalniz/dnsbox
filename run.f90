@@ -150,6 +150,7 @@ module run
         flush(out)
         if (my_id == 0) then
             if (stats_stat_written) flush(stats_stat_ch)
+            if (stats_stat_mhd_written) flush(stats_stat_mhd_ch)
             if (steps_written) flush(steps_ch)
             if (stats_specs_written) then
                 flush(stats_specx_ch)
@@ -171,6 +172,7 @@ module run
 
     subroutine run_close_channels
         if (stats_stat_written) close(stats_stat_ch)
+        if (stats_stat_mhd_written) close(stats_stat_mhd_ch)
         if (steps_written) close(steps_ch)
         if (stats_specs_written) then
             close(stats_specx_ch)
