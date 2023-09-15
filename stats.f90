@@ -11,7 +11,7 @@ module stats
     use timestep
 
     real(dp) :: ekin, powerin, enstrophy, dissip, norm_rhs, &
-                dissip_mhd
+                dissip_mhd, input_mhd
 
     integer(i4) :: stats_stat_ch, stats_specx_ch, stats_specy_ch, &
         stats_specz_ch
@@ -62,9 +62,12 @@ module stats
 
 !==============================================================================
 
-    subroutine stats_compute(vfieldk, fvfieldk)
+    subroutine stats_compute(vfieldk, fvfieldk, cur_vfieldk)
         complex(dpc), intent(in), dimension(:, :, :, :)  :: &
              vfieldk, fvfieldk
+
+        complex(dpc), optional, intent(in), dimension(:, :, :, :) :: &
+            cur_vfieldk
 
         ! Kinetic energy
         call vfield_norm2(vfieldk, ekin, .false.)
@@ -76,11 +79,19 @@ module stats
         call vfield_enstrophy(vfieldk, enstrophy, .false.)
         dissip = 2.0_dp * enstrophy / Re
 
-        ! MHD dissipation
-        call vfield_dissip_mhd(vfieldk, dissip_mhd, .false.)
-        dissip = dissip + dissip_mhd
+        if (MHD) then
 
-        ! TODO: Add the power due to the potential term of MHD
+            ! MHD dissipation
+            call vfield_dissip_mhd(vfieldk, dissip_mhd, .false.)
+            dissip = dissip + dissip_mhd
+
+            ! MHD total power
+            call vfield_power_mhd(vfieldk, cur_vfieldk, input_mhd, .false.)
+            
+            input_mhd = input_mhd + dissip_mhd
+            powerin = powerin + input_mhd
+
+        end if
 
         ! norm of rhs
         call vfield_norm(fvfieldk,norm_rhs,.false.)
