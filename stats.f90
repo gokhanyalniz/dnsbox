@@ -11,18 +11,19 @@ module stats
     use timestep
 
     real(dp) :: ekin, powerin, enstrophy, dissip, norm_rhs, &
-                dissip_mhd, input_mhd, dissip_rayleigh, input_rayleigh
+                dissip_mhd, input_mhd, dissip_ray, input_ray
 
     integer(i4) :: stats_stat_ch, stats_specx_ch, stats_specy_ch, &
-                   stats_specz_ch, stats_stat_mhd_ch
+                   stats_specz_ch, stats_stat_mhd_ch, stats_stat_ray_ch
     logical :: stats_stat_written = .false., stats_specs_written = .false., &
-               stats_stat_mhd_written = .false.
+               stats_stat_mhd_written = .false., stats_stat_ray_written = .false.
     
     character(255) :: stats_stat_file = 'stat.gp', &
                       stats_specx_file = 'specs_x.gp', &
                       stats_specy_file = 'specs_y.gp', &
                       stats_specz_file = 'specs_z.gp', &
-                      stats_stat_mhd_file = 'stat_mhd.gp'
+                      stats_stat_mhd_file = 'stat_mhd.gp', &
+                      stats_stat_ray_file = 'stat_ray.gp'
 
     contains 
 
@@ -97,11 +98,11 @@ module stats
 
         ! Input and dissipation due to Rayleigh friction
         if (rayleigh_friction) then
-            input_rayleigh = sigma_R * power_unit
-            powerin = powerin + input_rayleigh
+            input_ray = sigma_R * power_unit
+            powerin = powerin + input_ray
 
-            dissip_rayleigh = 2 * sigma_R * norm2_hor
-            dissip = dissip + dissip_rayleigh
+            dissip_ray = 2 * sigma_R * norm2_hor
+            dissip = dissip + dissip_ray
         end if
 
         if (MHD) then
@@ -226,6 +227,22 @@ module stats
                 "  ", itime, time, ekin, powerin, dissip, norm_rhs
 
            stats_stat_written = .true.
+
+            if (rayleigh_friction) then
+                inquire(file=TRIM(stats_stat_ray_file), exist=there, opened=there2)
+                if (.not.there) then
+                open(newunit=stats_stat_ray_ch,file=TRIM(stats_stat_ray_file),form='formatted')
+                    write(stats_stat_ray_ch,"(A2,"//i4_len//","//"3"//sp_len//")") &
+                        "# ", "itime", "time", "input_ray", "dissip_ray"
+                end if
+                if(there.and..not.there2) then
+                open(newunit=stats_stat_ray_ch,file=TRIM(stats_stat_ray_file),position='append')
+                end if
+                write(stats_stat_ray_ch,"(A2,"//i4_f//","//"3"//sp_f//")")&
+                    "  ", itime, time, input_ray, dissip_ray
+
+                stats_stat_ray_written = .true.
+            end if
 
            if (MHD) then
                 inquire(file=TRIM(stats_stat_mhd_file), exist=there, opened=there2)
