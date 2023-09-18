@@ -61,10 +61,10 @@ module stats
         end if
 
         if (.not. allreduce) then
-            call MPI_REDUCE(my_powerin, powerin, 1, MPI_REAL8, MPI_SUM, 0, &
+            call MPI_REDUCE(my_powerin, res, 1, MPI_REAL8, MPI_SUM, 0, &
             MPI_COMM_WORLD, mpi_err)
         else
-            call MPI_ALLREDUCE(my_powerin, powerin, 1, MPI_REAL8, MPI_SUM, &
+            call MPI_ALLREDUCE(my_powerin, res, 1, MPI_REAL8, MPI_SUM, &
             MPI_COMM_WORLD, mpi_err)
         end if
 
