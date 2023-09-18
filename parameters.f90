@@ -4,7 +4,7 @@ module parameters
     use io
 
     ! DO NOT EDIT ABOVE THIS LINE
-    character(7), parameter :: revision = "a91fe21"
+    character(7), parameter :: revision = "25b248e"
 
     !# Geometry & discretization
     integer(i4) :: &
@@ -261,6 +261,12 @@ module parameters
             write(out, *) 'smag_const = ', smag_const 
             LES = .true.
             Delta_LES = Lx / nx
+        end if
+
+        if (sigma_R < 0) then
+            write(out,*) 'sigma_R should be non-negative.'
+            flush(out)
+            error stop
         end if
 
         if (sigma_R > small) then 

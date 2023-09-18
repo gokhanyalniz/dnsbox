@@ -94,7 +94,7 @@ module vfield
 
 !==============================================================================
 
-    subroutine vfield_dissip_mhd(vfieldk, res, allreduce)
+    subroutine vfield_norm2_horizontal(vfieldk, res, allreduce)
 
         complex(dpc), intent(in) :: vfieldk(:, :, :, :)
         real(dp), intent(out) :: res
@@ -109,7 +109,7 @@ module vfield
                     conjg(vfieldk(ix,iy,iz,3)) * vfieldk(ix,iy,iz,3)
             ! correct for double counting
             if (iy == 1) dummy = dummy * 0.5_dp
-            res1 = res1 + 2*(Ha**2/Re)*dummy%re
+            res1 = res1 + dummy%re
         _loop_spec_end
 
         if (.not. allreduce) then
@@ -120,7 +120,7 @@ module vfield
             MPI_COMM_WORLD, mpi_err)
         end if
         
-    end subroutine vfield_dissip_mhd
+    end subroutine vfield_norm2_horizontal
 
 !==============================================================================
 
