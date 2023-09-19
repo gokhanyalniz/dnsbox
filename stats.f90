@@ -29,49 +29,6 @@ module stats
 
 !==============================================================================
 
-    subroutine stats_compute_powerin_unit(vfieldk, res, allreduce)
-        complex(dpc), intent(in)  :: vfieldk(:, :, :, :)
-        real(dp), intent(out) :: res
-        logical, intent(in) :: allreduce
-        real(dp) :: my_powerin
-
-        my_powerin = 0
-        if (ix_zero /= -1) then
-            if (tilting) then
-                if (forcing == 1) then ! sine
-                    my_powerin = -cos(tilt_angle * PI / 180.0_dp) &
-                                    * vfieldk(ix_zero,iy_force,1,1)%im &
-                                 -sin(tilt_angle * PI / 180.0_dp) &
-                                    * vfieldk(ix_zero,iy_force,1,3)%im
-                elseif (forcing == 2) then ! cosine
-                    ! This may require thinking in the presence of drag
-                    my_powerin = cos(tilt_angle * PI / 180.0_dp) &
-                                                        * vfieldk(ix_zero,iy_force,1,1)%re  &
-                                 + sin(tilt_angle * PI / 180.0_dp) &
-                                                        * vfieldk(ix_zero,iy_force,1,3)%re
-                end if
-            else
-                if (forcing == 1) then ! sine
-                    my_powerin = -vfieldk(ix_zero,iy_force,1,1)%im
-                elseif (forcing == 2) then ! cosine
-                    ! This may require thinking in the presence of drag
-                    my_powerin = vfieldk(ix_zero,iy_force,1,1)%re 
-                end if
-            end if
-        end if
-
-        if (.not. allreduce) then
-            call MPI_REDUCE(my_powerin, res, 1, MPI_REAL8, MPI_SUM, 0, &
-            MPI_COMM_WORLD, mpi_err)
-        else
-            call MPI_ALLREDUCE(my_powerin, res, 1, MPI_REAL8, MPI_SUM, &
-            MPI_COMM_WORLD, mpi_err)
-        end if
-
-    end subroutine stats_compute_powerin_unit
-
-!==============================================================================
-
     subroutine stats_compute(vfieldk, fvfieldk, cur_vfieldk)
         complex(dpc), intent(in), dimension(:, :, :, :)  :: &
              vfieldk, fvfieldk
@@ -85,7 +42,7 @@ module stats
         call vfield_norm2(vfieldk, ekin, .false.)
 
         ! Power input
-        call stats_compute_powerin_unit(vfieldk, power_unit, .false.)
+        call vfield_powerin_unit(vfieldk, power_unit, .false.)
         powerin = (amp / (4.0_dp * Re)) * power_unit
                 
         ! Viscous dissipation
