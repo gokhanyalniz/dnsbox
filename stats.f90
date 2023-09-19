@@ -42,7 +42,10 @@ module stats
         call vfield_norm2(vfieldk, ekin, .false.)
 
         ! Power input
-        call vfield_powerin_unit(vfieldk, power_unit, .false.)
+        ! power_unit is the inner product with the laminar state...
+        call vfield_inprod(vfieldk, laminar_vfieldk, power_unit, .false.)
+        power_unit = 2.0_dp * power_unit ! get rid of the 1/2 factor
+        ! ...which is proportional to the inner product with the forcing
         powerin = (amp / (4.0_dp * Re)) * power_unit
                 
         ! Viscous dissipation

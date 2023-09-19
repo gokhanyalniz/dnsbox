@@ -61,51 +61,6 @@ module vfield
 
 !==============================================================================
 
-    subroutine vfield_powerin_unit(vfieldk, res, allreduce)
-        complex(dpc), intent(in)  :: vfieldk(:, :, :, :)
-        real(dp), intent(out) :: res
-        logical, intent(in) :: allreduce
-        real(dp) :: my_powerin
-
-        ! this could be replaced with a dot product with the laminar state 
-
-        my_powerin = 0
-        if (ix_zero /= -1) then
-            if (tilting) then
-                if (forcing == 1) then ! sine
-                    my_powerin = -cos(tilt_angle * PI / 180.0_dp) &
-                                    * vfieldk(ix_zero,iy_force,1,1)%im &
-                                 -sin(tilt_angle * PI / 180.0_dp) &
-                                    * vfieldk(ix_zero,iy_force,1,3)%im
-                elseif (forcing == 2) then ! cosine
-
-                    my_powerin = cos(tilt_angle * PI / 180.0_dp) &
-                                                        * vfieldk(ix_zero,iy_force,1,1)%re  &
-                                 + sin(tilt_angle * PI / 180.0_dp) &
-                                                        * vfieldk(ix_zero,iy_force,1,3)%re
-                end if
-            else
-                if (forcing == 1) then ! sine
-                    my_powerin = -vfieldk(ix_zero,iy_force,1,1)%im
-                elseif (forcing == 2) then ! cosine
-
-                    my_powerin = vfieldk(ix_zero,iy_force,1,1)%re 
-                end if
-            end if
-        end if
-
-        if (.not. allreduce) then
-            call MPI_REDUCE(my_powerin, res, 1, MPI_REAL8, MPI_SUM, 0, &
-            MPI_COMM_WORLD, mpi_err)
-        else
-            call MPI_ALLREDUCE(my_powerin, res, 1, MPI_REAL8, MPI_SUM, &
-            MPI_COMM_WORLD, mpi_err)
-        end if
-
-    end subroutine vfield_powerin_unit
-
-!==============================================================================
-
     subroutine vfield_enstrophy(vfieldk, res, allreduce)
 
         complex(dpc), intent(in) :: vfieldk(:, :, :, :)
