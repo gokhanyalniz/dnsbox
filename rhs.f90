@@ -219,6 +219,7 @@ module rhs
         else
             call rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
         end if
+
         _loop_spec_begin
             fvel_vfieldk(ix,iy,iz,1:3) = fvel_vfieldk(ix,iy,iz,1:3) &
                                     + (- laplacian(ix,iy,iz) / Re) & 

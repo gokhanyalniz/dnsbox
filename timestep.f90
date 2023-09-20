@@ -112,6 +112,9 @@ module timestep
     
                 ! update the physical space version
                 call fftw_vk2x(vel_vfieldk, vel_vfieldxx)
+                
+                ! update the MHD current
+                if (MHD .and. present(cur_vfieldk)) call rhs_current(vel_vfieldk, cur_vfieldk)
 
                 ! log the step
                 ncorr_last = c
