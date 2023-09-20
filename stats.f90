@@ -88,13 +88,16 @@ module stats
         call vfield_norm(fvfieldk,norm_rhs,.false.)
 
         if (turbulent_fraction) then
-            ! calling this AND vfield_norm2_horizontal is redundant, since we could calculate
-            ! from kinetic energy...
-            call vfield_norm2_orthogonal(vfieldk, v2_avg, .false.)
-            v2_avg = 2.0_dp
+            if (MHD .or. rayleigh_friction) then
+                v2_avg = 2.0_dp * (ekin - norm2_hor)
+            else
+                call vfield_norm2_orthogonal(vfieldk, v2_avg, .false.)
+                v2_avg = 2.0_dp * v2_avg
+            end if
 
-            ! account for any wall-normal boundary conditions, we're not interested
-            ! in counting zeros
+            ! account for walls, we're not interested in counting zeros
+            ! there
+            ! might need to think about even/oddness here...
             if (Ry) then
                 v2_avg = v2_avg * ny / (ny - 2)
             end if
