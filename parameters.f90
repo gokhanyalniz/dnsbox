@@ -4,7 +4,7 @@ module parameters
     use io
 
     ! DO NOT EDIT ABOVE THIS LINE
-    character(7), parameter :: revision = "d194505"
+    character(7), parameter :: revision = "4d21ead"
 
     !# Geometry & discretization
     integer(i4) :: &
@@ -30,7 +30,9 @@ module parameters
                 Delta_LES = 0, & ! LES grid spacing
                 sigma_R = 0, & ! Rayleigh friction constant
                 Ha = 0 ! Hartmann number
-    logical :: LES = .false. , tilting = .false., rayleigh_friction = .false., MHD = .false.
+    logical :: LES = .false. , tilting = .false., &
+               rayleigh_friction = .false., MHD = .false., &
+               turbulent_fraction = .true. ! will put a control for this later / g
 
     !# Initiation
     integer(i4) :: IC = -1, &     ! Initial condition 
@@ -303,7 +305,7 @@ module parameters
         dissip_lam  = powerin_lam
 
         if (rayleigh_friction) then
-            powerin_lam = powerin_lam + 2*sigma_R*ekin_lam
+            powerin_lam = powerin_lam + 2.0_dp*sigma_R*ekin_lam
             dissip_lam = powerin_lam
         end if
         

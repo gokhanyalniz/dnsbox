@@ -11,19 +11,23 @@ module stats
     use timestep
 
     real(dp) :: ekin, powerin, enstrophy, dissip, norm_rhs, &
-                dissip_mhd, input_mhd, dissip_ray, input_ray
+                dissip_mhd, input_mhd, dissip_ray, input_ray, &
+                v2_avg
 
     integer(i4) :: stats_stat_ch, stats_specx_ch, stats_specy_ch, &
-                   stats_specz_ch, stats_stat_mhd_ch, stats_stat_ray_ch
+                   stats_specz_ch, stats_mhd_ch, stats_ray_ch, &
+                   stats_frac_ch
     logical :: stats_stat_written = .false., stats_specs_written = .false., &
-               stats_stat_mhd_written = .false., stats_stat_ray_written = .false.
+               stats_mhd_written = .false., stats_ray_written = .false., &
+               stats_frac_written = .false.
     
     character(255) :: stats_stat_file = 'stat.gp', &
                       stats_specx_file = 'specs_x.gp', &
                       stats_specy_file = 'specs_y.gp', &
                       stats_specz_file = 'specs_z.gp', &
-                      stats_stat_mhd_file = 'stat_mhd.gp', &
-                      stats_stat_ray_file = 'stat_ray.gp'
+                      stats_mhd_file = 'stat_mhd.gp', &
+                      stats_ray_file = 'stat_ray.gp', &
+                      stats_frac_file = 'stat_frac.gp'
 
     contains 
 
@@ -61,14 +65,14 @@ module stats
             input_ray = sigma_R * power_unit
             powerin = powerin + input_ray
 
-            dissip_ray = 2 * sigma_R * norm2_hor
+            dissip_ray = 2.0_dp * sigma_R * norm2_hor
             dissip = dissip + dissip_ray
         end if
 
         if (MHD) then
 
             ! MHD dissipation
-            dissip_mhd = 2*(Ha**2/Re) * norm2_hor
+            dissip_mhd = 2.0_dp*(Ha**2/Re) * norm2_hor
             dissip = dissip + dissip_mhd
 
             ! MHD total power
@@ -82,6 +86,22 @@ module stats
 
         ! norm of rhs
         call vfield_norm(fvfieldk,norm_rhs,.false.)
+
+        if (turbulent_fraction) then
+            if (MHD .or. rayleigh_friction) then
+                v2_avg = 2.0_dp * (ekin - norm2_hor)
+            else
+                call vfield_norm2_orthogonal(vfieldk, v2_avg, .false.)
+                v2_avg = 2.0_dp * v2_avg
+            end if
+
+            ! account for walls, we're not interested in counting zeros
+            ! there
+            ! might need to think about even/oddness here...
+            if (Ry) then
+                v2_avg = v2_avg * ny / (ny - 2)
+            end if
+        end if 
 
     end subroutine stats_compute
 
@@ -189,35 +209,51 @@ module stats
            stats_stat_written = .true.
 
             if (rayleigh_friction) then
-                inquire(file=TRIM(stats_stat_ray_file), exist=there, opened=there2)
+                inquire(file=TRIM(stats_ray_file), exist=there, opened=there2)
                 if (.not.there) then
-                open(newunit=stats_stat_ray_ch,file=TRIM(stats_stat_ray_file),form='formatted')
-                    write(stats_stat_ray_ch,"(A2,"//i4_len//","//"3"//sp_len//")") &
+                open(newunit=stats_ray_ch,file=TRIM(stats_ray_file),form='formatted')
+                    write(stats_ray_ch,"(A2,"//i4_len//","//"3"//sp_len//")") &
                         "# ", "itime", "time", "input_ray", "dissip_ray"
                 end if
                 if(there.and..not.there2) then
-                open(newunit=stats_stat_ray_ch,file=TRIM(stats_stat_ray_file),position='append')
+                open(newunit=stats_ray_ch,file=TRIM(stats_ray_file),position='append')
                 end if
-                write(stats_stat_ray_ch,"(A2,"//i4_f//","//"3"//sp_f//")")&
+                write(stats_ray_ch,"(A2,"//i4_f//","//"3"//sp_f//")")&
                     "  ", itime, time, input_ray, dissip_ray
 
-                stats_stat_ray_written = .true.
+                stats_ray_written = .true.
             end if
 
            if (MHD) then
-                inquire(file=TRIM(stats_stat_mhd_file), exist=there, opened=there2)
+                inquire(file=TRIM(stats_mhd_file), exist=there, opened=there2)
                 if (.not.there) then
-                open(newunit=stats_stat_mhd_ch,file=TRIM(stats_stat_mhd_file),form='formatted')
-                    write(stats_stat_mhd_ch,"(A2,"//i4_len//","//"3"//sp_len//")") &
+                open(newunit=stats_mhd_ch,file=TRIM(stats_mhd_file),form='formatted')
+                    write(stats_mhd_ch,"(A2,"//i4_len//","//"3"//sp_len//")") &
                         "# ", "itime", "time", "input_mhd", "dissip_mhd"
                 end if
                 if(there.and..not.there2) then
-                open(newunit=stats_stat_mhd_ch,file=TRIM(stats_stat_mhd_file),position='append')
+                open(newunit=stats_mhd_ch,file=TRIM(stats_mhd_file),position='append')
                 end if
-                write(stats_stat_mhd_ch,"(A2,"//i4_f//","//"3"//sp_f//")")&
+                write(stats_mhd_ch,"(A2,"//i4_f//","//"3"//sp_f//")")&
                     "  ", itime, time, input_mhd, dissip_mhd
 
-                stats_stat_mhd_written = .true.
+                stats_mhd_written = .true.
+           end if
+
+           if (turbulent_fraction) then
+                inquire(file=TRIM(stats_frac_file), exist=there, opened=there2)
+                if (.not.there) then
+                open(newunit=stats_frac_ch,file=TRIM(stats_frac_file),form='formatted')
+                    write(stats_frac_ch,"(A2,"//i4_len//","//"2"//sp_len//")") &
+                        "# ", "itime", "time", "<v2>"
+                end if
+                if(there.and..not.there2) then
+                open(newunit=stats_frac_ch,file=TRIM(stats_frac_file),position='append')
+                end if
+                write(stats_frac_ch,"(A2,"//i4_f//","//"2"//sp_f//")")&
+                    "  ", itime, time, v2_avg
+
+                stats_frac_written = .true.
            end if
 
         end if
