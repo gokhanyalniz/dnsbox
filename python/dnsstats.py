@@ -75,6 +75,8 @@ def dnsstats(
     if Path.is_file(phasesfile):
         phases = np.loadtxt(phasesfile)
         phase = True
+    else:
+        phase = False
 
     # non-dimensionalize based on laminar velocity and its characteristic
     # length scale
@@ -130,33 +132,33 @@ def dnsstats(
 
     # no non-dimensionalization whatsoever, use stat.gp as is
     if tfilter:
-        Ni = np.transpose(np.nonzero(stats[:, 1] > Ni))[0][0]
-        Nf = np.transpose(np.nonzero(stats[:, 1] < Nf))[-1][0]
+        Ni_ = np.transpose(np.nonzero(stats[:, 1] > Ni))[0][0]
+        Nf_ = np.transpose(np.nonzero(stats[:, 1] < Nf))[-1][0]
         stats = stats[Ni:Nf]
 
         if mhd:
-            Ni = np.transpose(np.nonzero(mhds[:, 1] > Ni))[0][0]
-            Nf = np.transpose(np.nonzero(mhds[:, 1] < Nf))[-1][0]
+            Ni_ = np.transpose(np.nonzero(mhds[:, 1] > Ni))[0][0]
+            Nf_ = np.transpose(np.nonzero(mhds[:, 1] < Nf))[-1][0]
             mhds = mhds[Ni:Nf]
 
         if ray:
-            Ni = np.transpose(np.nonzero(rays[:, 1] > Ni))[0][0]
-            Nf = np.transpose(np.nonzero(rays[:, 1] < Nf))[-1][0]
+            Ni_ = np.transpose(np.nonzero(rays[:, 1] > Ni))[0][0]
+            Nf_ = np.transpose(np.nonzero(rays[:, 1] < Nf))[-1][0]
             rays = rays[Ni:Nf]
 
         if frac0:
-            Ni = np.transpose(np.nonzero(fracs[:, 1] > Ni))[0][0]
-            Nf = np.transpose(np.nonzero(fracs[:, 1] < Nf))[-1][0]
+            Ni_ = np.transpose(np.nonzero(fracs[:, 1] > Ni))[0][0]
+            Nf_ = np.transpose(np.nonzero(fracs[:, 1] < Nf))[-1][0]
             fracs = fracs[Ni:Nf]
 
         if phase:
-            Ni = np.transpose(np.nonzero(phases[:, 1] > Ni))[0][0]
-            Nf = np.transpose(np.nonzero(phases[:, 1] < Nf))[-1][0]
+            Ni_ = np.transpose(np.nonzero(phases[:, 1] > Ni))[0][0]
+            Nf_ = np.transpose(np.nonzero(phases[:, 1] < Nf))[-1][0]
             phases = phases[Ni:Nf]
 
         if not diet:
-            Ni = np.transpose(np.nonzero(steps[:, 1] > Ni))[0][0]
-            Nf = np.transpose(np.nonzero(steps[:, 1] < Nf))[-1][0]
+            Ni_ = np.transpose(np.nonzero(steps[:, 1] > Ni))[0][0]
+            Nf_ = np.transpose(np.nonzero(steps[:, 1] < Nf))[-1][0]
             steps = steps[Ni:Nf]
 
     amp = np.pi**2
@@ -192,7 +194,11 @@ def dnsstats(
     figin, axin = plt.subplots()
     axin.set_xlabel(timeLabel)
     axin.set_ylabel(prodLabel)
-    axin.plot(stats[:, 1], Production, label="I")
+    if not (mhd or ray):
+        axin.plot(stats[:, 1], Production, label="I")
+    else:
+        input_forcing = Production - (mhds[:, 2] + rays[:, 2])
+        axin.plot(stats[:, 1], input_forcing, label="I-force")
     if mhd:
         axin.plot(mhds[:, 1], mhds[:, 2], label="I-MHD")
     if ray:
@@ -206,7 +212,11 @@ def dnsstats(
     figdis, axdis = plt.subplots()
     axdis.set_xlabel(timeLabel)
     axdis.set_ylabel(dissLabel)
-    axdis.plot(stats[:, 1], Dissipation, label="D")
+    if not (mhd or ray):
+        axdis.plot(stats[:, 1], Dissipation, label="D")
+    else:
+        dissip_forcing = Dissipation - (mhds[:, 3] + rays[:, 3])
+        axdis.plot(stats[:, 1], dissip_forcing, label="D-force")
     if mhd:
         axdis.plot(mhds[:, 1], mhds[:, 3], label="D-MHD")
     if ray:
@@ -214,7 +224,7 @@ def dnsstats(
     if mhd or ray:
         axdis.legend()
     axdis.set_title(title)
-    figdis.savefig(figuresDir / "input.png")
+    figdis.savefig(figuresDir / "dissip.png")
 
     if frac:
         figf, axf = plt.subplots()
