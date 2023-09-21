@@ -134,32 +134,32 @@ def dnsstats(
     if tfilter:
         Ni_ = np.transpose(np.nonzero(stats[:, 1] > Ni))[0][0]
         Nf_ = np.transpose(np.nonzero(stats[:, 1] < Nf))[-1][0]
-        stats = stats[Ni:Nf]
+        stats = stats[Ni_:Nf_]
 
         if mhd:
             Ni_ = np.transpose(np.nonzero(mhds[:, 1] > Ni))[0][0]
             Nf_ = np.transpose(np.nonzero(mhds[:, 1] < Nf))[-1][0]
-            mhds = mhds[Ni:Nf]
+            mhds = mhds[Ni_:Nf_]
 
         if ray:
             Ni_ = np.transpose(np.nonzero(rays[:, 1] > Ni))[0][0]
             Nf_ = np.transpose(np.nonzero(rays[:, 1] < Nf))[-1][0]
-            rays = rays[Ni:Nf]
+            rays = rays[Ni_:Nf_]
 
         if frac0:
             Ni_ = np.transpose(np.nonzero(fracs[:, 1] > Ni))[0][0]
             Nf_ = np.transpose(np.nonzero(fracs[:, 1] < Nf))[-1][0]
-            fracs = fracs[Ni:Nf]
+            fracs = fracs[Ni_:Nf_]
 
         if phase:
             Ni_ = np.transpose(np.nonzero(phases[:, 1] > Ni))[0][0]
             Nf_ = np.transpose(np.nonzero(phases[:, 1] < Nf))[-1][0]
-            phases = phases[Ni:Nf]
+            phases = phases[Ni_:Nf_]
 
         if not diet:
             Ni_ = np.transpose(np.nonzero(steps[:, 1] > Ni))[0][0]
             Nf_ = np.transpose(np.nonzero(steps[:, 1] < Nf))[-1][0]
-            steps = steps[Ni:Nf]
+            steps = steps[Ni_:Nf_]
 
     amp = np.pi**2
     if mhd:
@@ -171,9 +171,9 @@ def dnsstats(
     if ray:
         Edotlam += 2 * sigma_R * Elam
 
-    KineticEnergy = stats[:, 2] / Elam
-    Production = stats[:, 3] / Edotlam
-    Dissipation = stats[:, 4] / Edotlam
+    KineticEnergy = stats[:, 2]
+    Production = stats[:, 3]
+    Dissipation = stats[:, 4]
     normRHS = stats[:, 5]
 
     timeLabel = "$t$"
@@ -186,7 +186,7 @@ def dnsstats(
     figKin, axKin = plt.subplots()
     axKin.set_xlabel(timeLabel)
     axKin.set_ylabel(ekinLabel)
-    axKin.plot(stats[:, 1], KineticEnergy)
+    axKin.plot(stats[:, 1], KineticEnergy / Elam)
     axKin.set_title(title)
     figKin.savefig(figuresDir / "ekin.png")
 
@@ -195,14 +195,14 @@ def dnsstats(
     axin.set_xlabel(timeLabel)
     axin.set_ylabel(prodLabel)
     if not (mhd or ray):
-        axin.plot(stats[:, 1], Production, label="I")
+        axin.plot(stats[:, 1], Production / Edotlam)
     else:
         input_forcing = Production - (mhds[:, 2] + rays[:, 2])
-        axin.plot(stats[:, 1], input_forcing, label="I-force")
+        axin.plot(stats[:, 1], input_forcing / Edotlam, label="Body")
     if mhd:
-        axin.plot(mhds[:, 1], mhds[:, 2], label="I-MHD")
+        axin.plot(mhds[:, 1], mhds[:, 2] / Edotlam, label="MHD")
     if ray:
-        axin.plot(rays[:, 1], rays[:, 2], label="I-ray")
+        axin.plot(rays[:, 1], rays[:, 2] / Edotlam, label="Rayleigh")
     if mhd or ray:
         axin.legend()
     axin.set_title(title)
@@ -213,14 +213,14 @@ def dnsstats(
     axdis.set_xlabel(timeLabel)
     axdis.set_ylabel(dissLabel)
     if not (mhd or ray):
-        axdis.plot(stats[:, 1], Dissipation, label="D")
+        axdis.plot(stats[:, 1], Dissipation / Edotlam)
     else:
         dissip_forcing = Dissipation - (mhds[:, 3] + rays[:, 3])
-        axdis.plot(stats[:, 1], dissip_forcing, label="D-force")
+        axdis.plot(stats[:, 1], dissip_forcing / Edotlam, label="Viscous")
     if mhd:
-        axdis.plot(mhds[:, 1], mhds[:, 3], label="D-MHD")
+        axdis.plot(mhds[:, 1], mhds[:, 3] / Edotlam, label="MHD")
     if ray:
-        axdis.plot(rays[:, 1], rays[:, 3], label="D-ray")
+        axdis.plot(rays[:, 1], rays[:, 3] / Edotlam, label="Rayleigh")
     if mhd or ray:
         axdis.legend()
     axdis.set_title(title)
@@ -231,42 +231,51 @@ def dnsstats(
         axf.set_xlabel(timeLabel)
         axf.set_ylabel("$F$")
         if frac0:
-            axf.plot(fracs[:, 1], fracs[:, 2])
+            axf.plot(fracs[:, 1], fracs[:, 2], label="code")
 
-        try:
-            Ry = nml["symmetries"]["Ry"]
-        except:
-            Ry = 0
+        else:
 
-        if mhd:
-            f_mhd = 2 * (KineticEnergy - ((Re/Ha**2)/2) * mhds[:, 3])
-            if Ry:
-                f_mhd *= ny / (ny - 2)
-            axf.plot(stats[:, 1], f_mhd)
+            try:
+                Ry = nml["symmetries"]["Ry"]
+            except:
+                Ry = 0
 
-        if ray:
-            f_ray = 2 * (KineticEnergy - (1/2/sigma_R) * rays[:, 3])
-            if Ry:
-                f_ray *= ny / (ny - 2)
-            axf.plot(stats[:, 1], f_ray)
+            if mhd:
+                f_mhd = 2 * (KineticEnergy - mhds[:, 3] / (2*Ha**2/Re))
+                if Ry:
+                    f_mhd *= ny / (ny - 2)
+                axf.plot(stats[:, 1], f_mhd, label="mhd")
+
+            elif ray:
+                f_ray = 2 * (KineticEnergy - rays[:, 3] / (2*sigma_R))
+                if Ry:
+                    f_ray *= ny / (ny - 2)
+                axf.plot(stats[:, 1], f_ray, label="ray")
+
+            if mhd or ray:
+                axf.legend()
+    
         axf.set_title(title)
         figf.savefig(figuresDir / "v2_avg.png")
 
     # Production-Dissipation plot
-    factor = 0.1
+    # factor = 0.1
+    factor = 0
     figProdDis, axProdDis = plt.subplots()
     axProdDis.set_xlabel(prodLabel)
     axProdDis.set_ylabel(dissLabel)
-    axProdDis.plot(Production, Dissipation, color="gray", alpha=0.5)
+    axProdDis.plot(Production / Edotlam, Dissipation / Edotlam, color="gray", alpha=0.5)
 
-    minDP = min(0, min(min(Production), min(Dissipation)))
-    maxDP = max(max(Production), max(Dissipation))
+    minDP = min(0, min(min(Production / Edotlam), min(Dissipation / Edotlam)))
+    maxDP = max(max(Production / Edotlam), max(Dissipation / Edotlam))
     unitline = np.linspace(minDP, (1.0 + factor) * maxDP, 100)
     axProdDis.plot(unitline, unitline, "g")
     axProdDis.ticklabel_format(style="sci", axis="x", scilimits=(0, 0))
     axProdDis.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
-    axProdDis.set_xlim(min(0, min(Production)), (1.0 + factor) * max(Production))
-    axProdDis.set_ylim(min(0, min(Dissipation)), (1.0 + factor) * max(Dissipation))
+    # axProdDis.set_xlim(min(0, min(Production / Edotlam)), (1.0 + factor) * max(Production / Edotlam))
+    # axProdDis.set_ylim(min(0, min(Dissipation / Edotlam)), (1.0 + factor) * max(Dissipation / Edotlam))
+    axProdDis.set_xlim(min(Production / Edotlam), (1.0 + factor) * max(Production / Edotlam))
+    axProdDis.set_ylim(min(Dissipation / Edotlam), (1.0 + factor) * max(Dissipation / Edotlam))
     axProdDis.set_title(title)
     figProdDis.savefig(figuresDir / "peps.png")
 
