@@ -46,19 +46,13 @@ def main():
         dest="diet",
         help="plot only energy and input-dissipation.",
     )
-    parser.add_argument(
-        "--lines",
-        action="store_true",
-        dest="lines",
-        help="use line numbers in place of time.",
-    )
     args = vars(parser.parse_args())
 
     dnsstats(**args)
 
 
 def dnsstats(
-    runDir, Ni, Nf, tfilter=False, noshow=False, tex=False, diet=False, lines=False,
+    runDir, Ni, Nf, tfilter=False, noshow=False, tex=False, diet=False,
 ):
 
     dns.setPlotDefaults(tex=tex)
@@ -70,6 +64,18 @@ def dnsstats(
     stepsfile = "steps.gp"
     stats = np.loadtxt(runDir / statsfile, ndmin=2)
 
+    if not diet and Path.is_file(runDir / stepsfile):
+        steps = np.loadtxt(runDir / stepsfile, ndmin=2)
+
+    mhdfile = "stat_mhd.gp"
+    rayfile = "stat_ray.gp"
+    fracfile = "stat_frac.gp"
+
+    phasesfile = runDir / "phases.gp"
+    if Path.is_file(phasesfile):
+        phases = np.loadtxt(phasesfile)
+        phase = True
+
     # non-dimensionalize based on laminar velocity and its characteristic
     # length scale
     # assumed here qF = 1
@@ -80,38 +86,95 @@ def dnsstats(
     except:
         tilt_angle = 0
 
+    try:
+        Ha = nml["physics"]["Ha"]
+
+        if Path.is_file(runDir / mhdfile):
+            mhds = np.loadtxt(runDir / mhdfile, ndmin=2)
+            mhd = True
+            frac = True
+    except:
+        Ha = 0
+
+    try:
+        sigma_R = nml["physics"]["sigma_R"]
+
+        if Path.is_file(runDir / rayfile):
+            rays = np.loadtxt(runDir / rayfile, ndmin=2)
+            ray = True
+            frac = True
+    except:
+        sigma_R = 0
+
+    if Path.is_file(runDir / fracfile):
+        fracs = np.loadtxt(runDir / fracfile, ndmin=2)
+        frac = True
+        frac0 = True
+
     Lx = nml["grid"]["Lx"]
     Lz = nml["grid"]["Lz"]
     nx = nml["grid"]["nx"]
     ny = nml["grid"]["ny"]
     nz = nml["grid"]["nz"]
 
-    if abs(tilt_angle) > 0:
-        title = f"$\\mathrm{{Re}}={Re:.1f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $\\theta={tilt_angle:.1f}$, $N=({nx},{ny},{nz})$"
+    if mhd or ray:
+        if abs(tilt_angle) > 0:
+            title = f"$\\mathrm{{Ha}}={Ha:.1f}$, $\\mathrm{{Re}}={Re:.1f}$, $\\sigma_R={sigma_R:.1f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $\\theta={tilt_angle:.1f}$, $N=({nx},{ny},{nz})$"
+        else:
+            title = f"$\\mathrm{{Ha}}={Ha:.1f}$, $\\mathrm{{Re}}={Re:.1f}$, $\\sigma_R={sigma_R:.1f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $N=({nx},{ny},{nz})$"
     else:
-        title = f"$\\mathrm{{Re}}={Re:.1f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $N=({nx},{ny},{nz})$"
+        if abs(tilt_angle) > 0:
+            title = f"$\\mathrm{{Re}}={Re:.1f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $\\theta={tilt_angle:.1f}$, $N=({nx},{ny},{nz})$"
+        else:
+            title = f"$\\mathrm{{Re}}={Re:.1f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $N=({nx},{ny},{nz})$"
 
     # no non-dimensionalization whatsoever, use stat.gp as is
     if tfilter:
         Ni = np.transpose(np.nonzero(stats[:, 1] > Ni))[0][0]
         Nf = np.transpose(np.nonzero(stats[:, 1] < Nf))[-1][0]
+        stats = stats[Ni:Nf]
+
+        if mhd:
+            Ni = np.transpose(np.nonzero(mhds[:, 1] > Ni))[0][0]
+            Nf = np.transpose(np.nonzero(mhds[:, 1] < Nf))[-1][0]
+            mhds = mhds[Ni:Nf]
+
+        if ray:
+            Ni = np.transpose(np.nonzero(rays[:, 1] > Ni))[0][0]
+            Nf = np.transpose(np.nonzero(rays[:, 1] < Nf))[-1][0]
+            rays = rays[Ni:Nf]
+
+        if frac0:
+            Ni = np.transpose(np.nonzero(fracs[:, 1] > Ni))[0][0]
+            Nf = np.transpose(np.nonzero(fracs[:, 1] < Nf))[-1][0]
+            fracs = fracs[Ni:Nf]
+
+        if phase:
+            Ni = np.transpose(np.nonzero(phases[:, 1] > Ni))[0][0]
+            Nf = np.transpose(np.nonzero(phases[:, 1] < Nf))[-1][0]
+            phases = phases[Ni:Nf]
+
+        if not diet:
+            Ni = np.transpose(np.nonzero(steps[:, 1] > Ni))[0][0]
+            Nf = np.transpose(np.nonzero(steps[:, 1] < Nf))[-1][0]
+            steps = steps[Ni:Nf]
+
+    amp = np.pi**2
+    if mhd:
+        amp += 4*Ha**2
 
     Elam = 1 / 4
-    Edotlam = np.pi ** 2 / (8 * Re)
-    stats = stats[Ni:Nf]
-    if lines:
-        time = np.arange(len(stats))
-    else:
-        time = stats[:, 1]
+    Edotlam = amp / (8 * Re)
+
+    if ray:
+        Edotlam += 2 * sigma_R * Elam
+
     KineticEnergy = stats[:, 2] / Elam
     Production = stats[:, 3] / Edotlam
     Dissipation = stats[:, 4] / Edotlam
     normRHS = stats[:, 5]
 
-    if lines:
-        timeLabel = "$i$"
-    else:
-        timeLabel = "$t$"
+    timeLabel = "$t$"
     ekinLabel = "$E / E_L$"
     prodLabel = "$I / I_L$"
     dissLabel = "$\\epsilon / \\epsilon_L$"
@@ -121,9 +184,63 @@ def dnsstats(
     figKin, axKin = plt.subplots()
     axKin.set_xlabel(timeLabel)
     axKin.set_ylabel(ekinLabel)
-    axKin.plot(time, KineticEnergy)
+    axKin.plot(stats[:, 1], KineticEnergy)
     axKin.set_title(title)
     figKin.savefig(figuresDir / "ekin.png")
+
+    # Input
+    figin, axin = plt.subplots()
+    axin.set_xlabel(timeLabel)
+    axin.set_ylabel(prodLabel)
+    axin.plot(stats[:, 1], Production, label="I")
+    if mhd:
+        axin.plot(mhds[:, 1], mhds[:, 2], label="I-MHD")
+    if ray:
+        axin.plot(rays[:, 1], rays[:, 2], label="I-ray")
+    if mhd or ray:
+        axin.legend()
+    axin.set_title(title)
+    figin.savefig(figuresDir / "input.png")
+
+    # Dissipation
+    figdis, axdis = plt.subplots()
+    axdis.set_xlabel(timeLabel)
+    axdis.set_ylabel(dissLabel)
+    axdis.plot(stats[:, 1], Dissipation, label="D")
+    if mhd:
+        axdis.plot(mhds[:, 1], mhds[:, 3], label="D-MHD")
+    if ray:
+        axdis.plot(rays[:, 1], rays[:, 3], label="D-ray")
+    if mhd or ray:
+        axdis.legend()
+    axdis.set_title(title)
+    figdis.savefig(figuresDir / "input.png")
+
+    if frac:
+        figf, axf = plt.subplots()
+        axf.set_xlabel(timeLabel)
+        axf.set_ylabel("$F$")
+        if frac0:
+            axf.plot(fracs[:, 1], fracs[:, 2])
+
+        try:
+            Ry = nml["symmetries"]["Ry"]
+        except:
+            Ry = 0
+
+        if mhd:
+            f_mhd = 2 * (KineticEnergy - ((Re/Ha**2)/2) * mhds[:, 3])
+            if Ry:
+                f_mhd *= ny / (ny - 2)
+            axf.plot(stats[:, 1], f_mhd)
+
+        if ray:
+            f_ray = 2 * (KineticEnergy - (1/2/sigma_R) * rays[:, 3])
+            if Ry:
+                f_ray *= ny / (ny - 2)
+            axf.plot(stats[:, 1], f_ray)
+        axf.set_title(title)
+        figf.savefig(figuresDir / "v2_avg.png")
 
     # Production-Dissipation plot
     factor = 0.1
@@ -143,13 +260,11 @@ def dnsstats(
     axProdDis.set_title(title)
     figProdDis.savefig(figuresDir / "peps.png")
 
-    phasesfile = runDir / "phases.gp"
     if Path.is_file(phasesfile):
-        data = np.loadtxt(phasesfile)
-        tphases = data[:, 1]
+        tphases = phases[:, 1]
         dtphases = tphases[1:] - tphases[:-1]
-        phases_x = np.unwrap(data[:, 2])
-        phases_z = np.unwrap(data[:, 3])
+        phases_x = np.unwrap(phases[:, 2])
+        phases_z = np.unwrap(phases[:, 3])
         dphases_x = (phases_x[1:] - phases_x[:-1]) / dtphases
         dphases_z = (phases_z[1:] - phases_z[:-1]) / dtphases
 
@@ -177,16 +292,11 @@ def dnsstats(
         figRHS, axRHS = plt.subplots()
         axRHS.set_xlabel(timeLabel)
         axRHS.set_ylabel(normLabel)
-        axRHS.plot(time, normRHS)
+        axRHS.plot(stats[:, 1], normRHS)
         axRHS.set_title(title)
         figRHS.savefig(figuresDir / "normrhs.png")
 
         if Path.is_file(runDir / stepsfile):
-            steps = np.loadtxt(runDir / stepsfile, ndmin=2)
-            if lines:
-                time = np.arange(len(steps))
-            else:
-                time = steps[:, 1]
             dt = steps[:, 2]
             courant = steps[:, 3]
             err_corr = steps[:, 4]
@@ -196,18 +306,18 @@ def dnsstats(
             figts, (axts1, axts2, axts4, axts3) = plt.subplots(
                 nrows=4, ncols=1, sharex=True
             )
-            axts3.plot(time, courant)
+            axts3.plot(steps[:, 1], courant)
             axts3.set_xlabel(timeLabel)
             axts3.set_ylabel("Courant number")
 
-            axts4.plot(time, dt)
+            axts4.plot(steps[:, 1], dt)
             axts4.set_xlabel(timeLabel)
             axts4.set_ylabel("$dt$")
 
-            axts2.plot(time[:-1], err_corr[1:])
+            axts2.plot(steps[:, 1][:-1], err_corr[1:])
             axts2.set_ylabel("Corrector rel. err.")
 
-            axts1.plot(time[:-1], ncorr[1:])
+            axts1.plot(steps[:, 1][:-1], ncorr[1:])
             axts1.set_ylabel("Corrector iterations")
             axts1.yaxis.get_major_locator().set_params(integer=True)
             axts1.set_title(title)
