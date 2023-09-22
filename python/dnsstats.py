@@ -190,6 +190,11 @@ def dnsstats(
     Production = stats[:, 3]
     Dissipation = stats[:, 4]
     normRHS = stats[:, 5]
+    if stats.shape[1] > 6:
+        power_unit = stats[:, 6]
+        ekin_perturb = KineticEnergy + Elam - power_unit
+    else:
+        ekin_perturb = None
 
     timeLabel = "$t$"
     ekinLabel = "$E / E_L$"
@@ -204,6 +209,14 @@ def dnsstats(
     axKin.plot(stats[:, 1], KineticEnergy / Elam)
     axKin.set_title(title)
     figKin.savefig(figuresDir / "ekin.png")
+
+    # Perturbation kinetic energy
+    figKin, axKin = plt.subplots()
+    axKin.set_xlabel(timeLabel)
+    axKin.set_ylabel("$E'$")
+    axKin.plot(stats[:, 1], ekin_perturb)
+    axKin.set_title(title)
+    figKin.savefig(figuresDir / "ekin_perturb.png")
 
     # Input
     figin, axin = plt.subplots()
