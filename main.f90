@@ -98,8 +98,7 @@ program main
             ! Stop if laminarized
             if (my_id==0 .and. terminate_laminar) then
 
-                ! e_diff = abs(ekin - ekin_lam)/ekin_lam
-                e_diff = abs(ekin_perturb/ekin_lam)
+                e_diff = abs(ekin - ekin_lam)/ekin_lam
                 input_diff = abs(powerin - powerin_lam)/powerin_lam
                 diss_diff = abs(dissip - dissip_lam )/dissip_lam 
                 
