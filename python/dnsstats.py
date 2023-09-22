@@ -130,6 +130,21 @@ def dnsstats(
         else:
             title = f"$\\mathrm{{Re}}={Re:.1f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $N=({nx},{ny},{nz})$"
 
+    if not tfilter:
+        tmins = [np.amin(stats[:,1])]
+        tmaxs = [np.amax(stats[:,1])]
+        if mhd:
+            tmins.append(np.amin(mhds[:,1]))
+            tmaxs.append(np.amax(mhds[:,1]))
+        if ray:
+            tmins.append(np.amin(rays[:,1]))
+            tmaxs.append(np.amax(rays[:,1]))
+
+        Ni = max(tmins)
+        Nf = min(tmaxs)
+
+        tfilter = True
+
     # no non-dimensionalization whatsoever, use stat.gp as is
     if tfilter:
         Ni_ = np.transpose(np.nonzero(stats[:, 1] > Ni))[0][0]
