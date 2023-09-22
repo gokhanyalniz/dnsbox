@@ -12,7 +12,7 @@ module stats
 
     real(dp) :: ekin, powerin, enstrophy, dissip, norm_rhs, &
                 dissip_mhd, input_mhd, dissip_ray, input_ray, &
-                v2_avg
+                v2_avg, ekin_perturb
 
     integer(i4) :: stats_stat_ch, stats_specx_ch, stats_specy_ch, &
                    stats_specz_ch, stats_mhd_ch, stats_ray_ch, &
@@ -51,6 +51,9 @@ module stats
         power_unit = 2.0_dp * power_unit ! get rid of the 1/2 factor
         ! ...which is proportional to the inner product with the forcing
         powerin = (amp / (4.0_dp * Re)) * power_unit
+
+        ! Perturbation kinetic energy, (1/2)|u - u_lam|^2
+        ekin_perturb = ekin + ekin_lam - power_unit
                 
         ! Viscous dissipation
         call vfield_enstrophy(vfieldk, enstrophy, .false.)
