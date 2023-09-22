@@ -200,14 +200,14 @@ module stats
             inquire(file=TRIM(stats_stat_file), exist=there, opened=there2)
             if (.not.there) then
             open(newunit=stats_stat_ch,file=TRIM(stats_stat_file),form='formatted')
-                write(stats_stat_ch,"(A2,"//i4_len//","//"5"//sp_len//")") &
-                    "# ", "itime", "time", "ekin", "powerin", "dissip", "norm_rhs"
+                write(stats_stat_ch,"(A2,"//i4_len//","//"6"//sp_len//")") &
+                    "# ", "itime", "time", "ekin", "powerin", "dissip", "norm_rhs", "power_unit"
             end if
             if(there.and..not.there2) then
             open(newunit=stats_stat_ch,file=TRIM(stats_stat_file),position='append')
             end if
-            write(stats_stat_ch,"(A2,"//i4_f//","//"5"//sp_f//")")&
-                "  ", itime, time, ekin, powerin, dissip, norm_rhs
+            write(stats_stat_ch,"(A2,"//i4_f//","//"6"//sp_f//")")&
+                "  ", itime, time, ekin, powerin, dissip, norm_rhs, power_unit
 
            stats_stat_written = .true.
 
