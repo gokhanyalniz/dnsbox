@@ -33,15 +33,16 @@ module timestep
             timestep_prefieldk, timestep_corfieldk, timestep_nonlinterm_next, &
             timestep_nonlinterm_prev
 
-        complex(dpc), allocatable, dimension(:, :, :, :) :: timestep_current
+        complex(dpc), allocatable, dimension(:, :, :, :) :: timestep_current_pre, timestep_current_next
 
         ! semi-implicit predictor-corrector method
         _indices
         integer(i4) :: c
         real(dp)    :: invdt, norm, error
 
-        if (MHD .and. .not. allocated(timestep_current)) then
-            allocate(timestep_current(nx_perproc, ny_half, nz, 3))
+        if (MHD) then
+            if allocated(timestep_current_prev) allocate(timestep_current_prev(nx_perproc, ny_half, nz, 3))
+            if allocated(timestep_current_next) allocate(timestep_current_next(nx_perproc, ny_half, nz, 3))
         end if
 
         ! initial rhs
@@ -50,7 +51,9 @@ module timestep
         else
             call rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
         end if
+
         timestep_nonlinterm_prev = fvel_vfieldk
+        if (MHD) timestep_current_prev = cur_vfieldk
 
         ! add the linear term to the rhs for others's use
         _loop_spec_begin
@@ -79,7 +82,7 @@ module timestep
             
             call fftw_vk2x(timestep_prefieldk, timestep_prefieldxx)
             if (MHD) then
-                call rhs_nonlin_term(timestep_prefieldxx, timestep_prefieldk, timestep_nonlinterm_next, timestep_current)
+                call rhs_nonlin_term(timestep_prefieldxx, timestep_prefieldk, timestep_nonlinterm_next, timestep_current_next)
             else
                 call rhs_nonlin_term(timestep_prefieldxx, timestep_prefieldk, timestep_nonlinterm_next)
             end if
@@ -99,6 +102,7 @@ module timestep
 
             ! update
             timestep_nonlinterm_prev(:,:,:,1:3) = timestep_nonlinterm_next(:,:,:,1:3)
+            if (MHD) timestep_current_prev = timestep_current_next
 
             if (error/norm < steptol) then
                 ! accept step
@@ -114,7 +118,7 @@ module timestep
                 call fftw_vk2x(vel_vfieldk, vel_vfieldxx)
                 
                 ! update the MHD current
-                if (MHD .and. present(cur_vfieldk)) call rhs_current(vel_vfieldk, cur_vfieldk)
+                if (MHD) call rhs_current(vel_vfieldk, cur_vfieldk)
 
                 ! log the step
                 ncorr_last = c
