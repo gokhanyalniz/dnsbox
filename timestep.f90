@@ -41,8 +41,8 @@ module timestep
         real(dp)    :: invdt, norm, error
 
         if (MHD) then
-            if allocated(timestep_current_prev) allocate(timestep_current_prev(nx_perproc, ny_half, nz, 3))
-            if allocated(timestep_current_next) allocate(timestep_current_next(nx_perproc, ny_half, nz, 3))
+            if (.not. allocated(timestep_current_prev)) allocate(timestep_current_prev(nx_perproc, ny_half, nz, 3))
+            if (.not. allocated(timestep_current_next)) allocate(timestep_current_next(nx_perproc, ny_half, nz, 3))
         end if
 
         ! initial rhs
