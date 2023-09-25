@@ -33,7 +33,7 @@ module timestep
             timestep_prefieldk, timestep_corfieldk, timestep_nonlinterm_next, &
             timestep_nonlinterm_prev
 
-        complex(dpc), allocatable, dimension(:, :, :, :) :: timestep_current_pre, timestep_current_next
+        complex(dpc), allocatable, dimension(:, :, :, :) :: timestep_current_prev, timestep_current_next
 
         ! semi-implicit predictor-corrector method
         _indices

@@ -21,6 +21,11 @@ def main():
         help="number of time steps to add to i_finish",
     )
     parser.add_argument(
+        "--noray",
+        action="store_true",
+        dest="noray",
+    )
+    parser.add_argument(
         "-script",
         dest="script",
         help="Submission script. If given, submit the job by sbatch script",
@@ -31,7 +36,7 @@ def main():
     dnscontinue(**args)
 
 
-def dnscontinue(rundir, i_finish_plus=None, script=None):
+def dnscontinue(rundir, i_finish_plus=None, noray=False, script=None):
 
     rundir = Path(rundir)
 
@@ -44,6 +49,9 @@ def dnscontinue(rundir, i_finish_plus=None, script=None):
     parameters["initiation"]["i_start"] = itime_final
     if i_finish_plus is not None:
         parameters["termination"]["i_finish"] += i_finish_plus
+
+    if noray:
+        parameters["physics"]["sigma_r"] = False
 
     stat_file = rundir / "stat.gp"
     if Path.is_file(stat_file):
