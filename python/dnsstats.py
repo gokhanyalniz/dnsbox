@@ -95,8 +95,11 @@ def dnsstats(
             mhds = np.loadtxt(runDir / mhdfile, ndmin=2)
             mhd = True
             frac = True
+        else:
+            mhd = False
     except:
         Ha = 0
+        mhd = False
 
     try:
         sigma_R = nml["physics"]["sigma_R"]
@@ -105,8 +108,11 @@ def dnsstats(
             rays = np.loadtxt(runDir / rayfile, ndmin=2)
             ray = True
             frac = True
+        else:
+            ray = False
     except:
         sigma_R = 0
+        ray = False
 
     if Path.is_file(runDir / fracfile):
         fracs = np.loadtxt(runDir / fracfile, ndmin=2)
@@ -224,9 +230,16 @@ def dnsstats(
     axin.set_ylabel(prodLabel)
     if not (mhd or ray):
         axin.plot(stats[:, 1], Production / Edotlam)
-    else:
+    elif mhd and ray:
         input_forcing = Production - (mhds[:, 2] + rays[:, 2])
         axin.plot(stats[:, 1], input_forcing / Edotlam, label="Body")
+    elif mhd:
+        input_forcing = Production - mhds[:, 2]
+        axin.plot(stats[:, 1], input_forcing / Edotlam, label="Body")
+    elif ray:
+        input_forcing = Production - rays[:, 2]
+        axin.plot(stats[:, 1], input_forcing / Edotlam, label="Body")
+
     if mhd:
         axin.plot(mhds[:, 1], mhds[:, 2] / Edotlam, label="MHD")
     if ray:
@@ -242,9 +255,16 @@ def dnsstats(
     axdis.set_ylabel(dissLabel)
     if not (mhd or ray):
         axdis.plot(stats[:, 1], Dissipation / Edotlam)
-    else:
+    elif mhd and ray:
         dissip_forcing = Dissipation - (mhds[:, 3] + rays[:, 3])
         axdis.plot(stats[:, 1], dissip_forcing / Edotlam, label="Viscous")
+    elif mhd :
+        dissip_forcing = Dissipation - mhds[:, 3]
+        axdis.plot(stats[:, 1], dissip_forcing / Edotlam, label="Viscous")
+    elif ray:
+        dissip_forcing = Dissipation - rays[:, 3]
+        axdis.plot(stats[:, 1], dissip_forcing / Edotlam, label="Viscous")
+
     if mhd:
         axdis.plot(mhds[:, 1], mhds[:, 3] / Edotlam, label="MHD")
     if ray:
