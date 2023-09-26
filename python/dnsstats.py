@@ -91,7 +91,7 @@ def dnsstats(
     try:
         Ha = nml["physics"]["Ha"]
 
-        if Path.is_file(runDir / mhdfile):
+        if Ha > 0 and Path.is_file(runDir / mhdfile):
             mhds = np.loadtxt(runDir / mhdfile, ndmin=2)
             mhd = True
             frac = True
@@ -104,7 +104,7 @@ def dnsstats(
     try:
         sigma_R = nml["physics"]["sigma_R"]
 
-        if Path.is_file(runDir / rayfile):
+        if sigma_R > 0 and Path.is_file(runDir / rayfile):
             rays = np.loadtxt(runDir / rayfile, ndmin=2)
             ray = True
             frac = True
