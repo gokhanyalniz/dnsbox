@@ -52,13 +52,19 @@ def main():
         dest="old",
         help="load data with the assumption that the last (unit powerin) column is missing.",
     )
+    parser.add_argument(
+        "--onlynew",
+        action="store_true",
+        dest="onlynew",
+        help="set ti to the continuation time.",
+    )
     args = vars(parser.parse_args())
 
     dnsstats(**args)
 
 
 def dnsstats(
-    runDir, Ni, Nf, tfilter=False, noshow=False, tex=False, diet=False, old=False,
+    runDir, Ni, Nf, tfilter=False, noshow=False, tex=False, diet=False, old=False, onlynew=False,
 ):
 
     dns.setPlotDefaults(tex=tex)
@@ -91,6 +97,13 @@ def dnsstats(
     # length scale
     # assumed here qF = 1
     nml = dns.readParameters(runDir / "parameters.in")
+
+    if onlynew and "t_start" in nml["initiation"]:
+        Ni = nml["initiation"]["t_start"]
+        if Nf == None:
+            Nf = np.inf
+        tfilter = True
+
     Re = nml["physics"]["Re"]
     try:
         tilt_angle = nml["physics"]["tilt_angle"]
@@ -134,7 +147,7 @@ def dnsstats(
     ny = nml["grid"]["ny"]
     nz = nml["grid"]["nz"]
 
-    if mhd or ray:
+    if Ha > 0 or sigma_R > 0:
         if abs(tilt_angle) > 0:
             title = f"$\\mathrm{{Ha}}={Ha:.1f}$, $\\mathrm{{Re}}={Re:.1f}$, $\\sigma_R={sigma_R:.1f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $\\theta={tilt_angle:.1f}$, $N=({nx},{ny},{nz})$"
         else:
