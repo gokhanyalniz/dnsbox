@@ -100,7 +100,7 @@ def dnsstats(
 
     if onlynew and "t_start" in nml["initiation"]:
         Ni = nml["initiation"]["t_start"]
-        if Nf == None:
+        if Nf == None or Nf == -1:
             Nf = np.inf
         tfilter = True
 
