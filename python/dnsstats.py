@@ -238,13 +238,14 @@ def dnsstats(
     axKin.set_title(title)
     figKin.savefig(figuresDir / "ekin.png")
 
-    # Perturbation kinetic energy
-    figKin, axKin = plt.subplots()
-    axKin.set_xlabel(timeLabel)
-    axKin.set_ylabel("$E'$")
-    axKin.plot(stats[:, 1], ekin_perturb)
-    axKin.set_title(title)
-    figKin.savefig(figuresDir / "ekin_perturb.png")
+    if ekin_perturb is not None:
+        # Perturbation kinetic energy
+        figKin, axKin = plt.subplots()
+        axKin.set_xlabel(timeLabel)
+        axKin.set_ylabel("$E'$")
+        axKin.plot(stats[:, 1], ekin_perturb)
+        axKin.set_title(title)
+        figKin.savefig(figuresDir / "ekin_perturb.png")
 
     # Input
     figin, axin = plt.subplots()
