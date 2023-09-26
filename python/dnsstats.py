@@ -75,7 +75,7 @@ def dnsstats(
     statsfile = "stat.gp"
     stepsfile = "steps.gp"
     if old:
-        stats = np.loadtxt(runDir / statsfile, ndmin=2, usecols=range(0, 7))
+        stats = np.loadtxt(runDir / statsfile, ndmin=2, usecols=range(0, 6))
     else:
         stats = np.loadtxt(runDir / statsfile, ndmin=2)
 
@@ -101,7 +101,7 @@ def dnsstats(
     if onlynew and "t_start" in nml["initiation"]:
         Ni = nml["initiation"]["t_start"]
         if Nf == None:
-            Nf = stats[-1, 1]
+            Nf = np.inf
         tfilter = True
 
     Re = nml["physics"]["Re"]
