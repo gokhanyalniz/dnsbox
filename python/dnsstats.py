@@ -103,6 +103,9 @@ def dnsstats(
         if Nf == None or Nf == -1:
             Nf = np.inf
         tfilter = True
+        retfilter = True
+    else:
+        retfilter = False
 
     Re = nml["physics"]["Re"]
     try:
@@ -158,7 +161,7 @@ def dnsstats(
         else:
             title = f"$\\mathrm{{Re}}={Re:.1f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $N=({nx},{ny},{nz})$"
 
-    if not tfilter:
+    if not tfilter or retfilter:
         tmins = [np.amin(stats[:,1])]
         tmaxs = [np.amax(stats[:,1])]
         if mhd:
@@ -168,8 +171,15 @@ def dnsstats(
             tmins.append(np.amin(rays[:,1]))
             tmaxs.append(np.amax(rays[:,1]))
 
-        Ni = max(tmins)
-        Nf = min(tmaxs)
+        Ni_ = max(tmins)
+        Nf_ = min(tmaxs)
+
+        if retfilter:
+            Ni = max(Ni, Ni_)
+            Nf = min(Nf, Nf_)
+        else:
+            Ni = Ni_
+            Nf = Nf_
 
         tfilter = True
 
