@@ -46,13 +46,19 @@ def main():
         dest="diet",
         help="plot only energy and input-dissipation.",
     )
+    parser.add_argument(
+        "--old",
+        action="store_true",
+        dest="old",
+        help="load data with the assumption that the last (unit powerin) column is missing.",
+    )
     args = vars(parser.parse_args())
 
     dnsstats(**args)
 
 
 def dnsstats(
-    runDir, Ni, Nf, tfilter=False, noshow=False, tex=False, diet=False,
+    runDir, Ni, Nf, tfilter=False, noshow=False, tex=False, diet=False, old=False,
 ):
 
     dns.setPlotDefaults(tex=tex)
@@ -62,7 +68,10 @@ def dnsstats(
 
     statsfile = "stat.gp"
     stepsfile = "steps.gp"
-    stats = np.loadtxt(runDir / statsfile, ndmin=2)
+    if old:
+        stats = np.loadtxt(runDir / statsfile, ndmin=2, usecols=range(0, 7))
+    else:
+        stats = np.loadtxt(runDir / statsfile, ndmin=2)
 
     if not diet and Path.is_file(runDir / stepsfile):
         steps = np.loadtxt(runDir / stepsfile, ndmin=2)
