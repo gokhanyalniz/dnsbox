@@ -103,6 +103,7 @@ module rhs
             ! advect(j) = - F{u_i d_i u_j}
             do j = 1, 3
                 advect(j) = 0
+                advect_(j) = 0
                 do i = 1 ,3
                     advect(j) = advect(j) - nabla(ix, iy, iz, i) &
                                 * rhs_vfieldk(ix, iy, iz, nsym(i,j))
@@ -110,13 +111,11 @@ module rhs
 
                 if(LES) advect(j) = advect(j) - rhs_div_model_vfieldk(ix, iy, iz, j)
 
-                advect_(j) = advect(j)
-
             end do
 
-            if(MHD) advect_(2) = advect(2) + nabla(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * (Ha**2/Re)
+            if(MHD) advect_(2) = advect_(2) + vfield_coordinatek(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * (Ha**2/Re)
 
-            if(rayleigh_friction) advect_(2) = advect(2) + nabla(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * sigma_R
+            if(rayleigh_friction) advect_(2) = advect_(2) + vfield_coordinatek(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * sigma_R
 
             ! Pressure terms
             div = 0
