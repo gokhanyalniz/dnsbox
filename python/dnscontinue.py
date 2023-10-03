@@ -61,27 +61,34 @@ def dnscontinue(rundir, i_finish_plus=None, noray=False, script=None, newdir=Fal
         stateout = states[-1]
 
     parameters = dns.readParameters(rundir / "parameters.in")
-    parameters["initiation"]["ic"] = i_final_state
-    itime_final = i_final_state * parameters["output"]["i_save_fields"]
-    parameters["initiation"]["i_start"] = itime_final
+    if not newdir:
+        parameters["initiation"]["ic"] = i_final_state
+        itime_final = i_final_state * parameters["output"]["i_save_fields"]
+        parameters["initiation"]["i_start"] = itime_final
+    else:
+        parameters["initiation"]["ic"] = 0
+        parameters["initiation"]["i_start"] = 0
     if i_finish_plus is not None:
         parameters["termination"]["i_finish"] += i_finish_plus
 
     if noray:
         parameters["physics"]["sigma_r"] = False
 
-    stat_file = rundir / "stat.gp"
-    if Path.is_file(stat_file):
-        stats = np.loadtxt(rundir / "stat.gp")
-        times = t_final_state = stats[stats[:, 0] == itime_final]
-        if len(times) > 0:
-            t_final_state = stats[stats[:, 0] == itime_final][-1][1]
+    if not newdir:
+        stat_file = rundir / "stat.gp"
+        if Path.is_file(stat_file):
+            stats = np.loadtxt(rundir / "stat.gp")
+            times = t_final_state = stats[stats[:, 0] == itime_final]
+            if len(times) > 0:
+                t_final_state = stats[stats[:, 0] == itime_final][-1][1]
+            else:
+                t_final_state = itime_final * parameters["time_stepping"]["dt"]
         else:
             t_final_state = itime_final * parameters["time_stepping"]["dt"]
-    else:
-        t_final_state = itime_final * parameters["time_stepping"]["dt"]
 
-    parameters["initiation"]["t_start"] = t_final_state
+        parameters["initiation"]["t_start"] = t_final_state
+    else:
+        parameters["initiation"]["t_start"] = 0
     dns.writeParameters(parameters, rundir_out / "parameters.in")
 
     if not newdir:
