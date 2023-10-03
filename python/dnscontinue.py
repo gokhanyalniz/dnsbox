@@ -4,6 +4,8 @@ import re
 from pathlib import Path
 from subprocess import call
 import numpy as np
+from os import makedirs
+from shutil import copy
 
 import dns
 
@@ -30,18 +32,33 @@ def main():
         dest="script",
         help="Submission script. If given, submit the job by sbatch script",
     )
+    parser.add_argument(
+        "--newdir",
+        action="store_true",
+        dest="newdir",
+    )
 
     args = vars(parser.parse_args())
 
     dnscontinue(**args)
 
 
-def dnscontinue(rundir, i_finish_plus=None, noray=False, script=None):
+def dnscontinue(rundir, i_finish_plus=None, noray=False, script=None, newdir=False):
 
     rundir = Path(rundir)
+    if not newdir:
+        rundir_out = rundir
+    else:
+        rundir_out = rundir / "continue"
+        makedirs(rundir_out)
 
     states = sorted(list(rundir.glob("state.*")))
-    i_final_state = int(states[-1].name[-6:])
+    if len(states) > 2:
+        i_final_state = int(states[-2].name[-6:])
+        stateout = states[-2]
+    else:
+        i_final_state = int(states[-1].name[-6:])
+        stateout = states[-1]
 
     parameters = dns.readParameters(rundir / "parameters.in")
     parameters["initiation"]["ic"] = i_final_state
@@ -65,26 +82,30 @@ def dnscontinue(rundir, i_finish_plus=None, noray=False, script=None):
         t_final_state = itime_final * parameters["time_stepping"]["dt"]
 
     parameters["initiation"]["t_start"] = t_final_state
-    dns.writeParameters(parameters, rundir / "parameters.in")
+    dns.writeParameters(parameters, rundir_out / "parameters.in")
 
-    files = list(rundir.glob("*.gp"))
+    if not newdir:
+        files = list(rundir.glob("*.gp"))
+        for file in files:
+            with open(file, "r") as f:
+                lines = f.readlines()
 
-    for file in files:
-        with open(file, "r") as f:
-            lines = f.readlines()
+            with open(file, "w") as f:
+                for line in lines:
+                    try:
+                        i_time = int(re.search(r"\d+", line).group())
 
-        with open(file, "w") as f:
-            for line in lines:
-                try:
-                    i_time = int(re.search(r"\d+", line).group())
+                        if i_time > itime_final:
+                            break
+                        else:
+                            f.write(line)
 
-                    if i_time > itime_final:
-                        break
-                    else:
+                    except:
                         f.write(line)
-
-                except:
-                    f.write(line)
+    else:
+        copy(stateout, rundir_out / stateout.name)
+        for f in rundir.glob("*.slurm"):
+            copy(f, rundir_out / f.name)
 
     if not script == None:
         call(["sbatch", script])
