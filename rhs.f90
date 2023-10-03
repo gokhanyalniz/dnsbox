@@ -19,7 +19,7 @@ module rhs
         complex(dpc), intent(out) :: fvel_vfieldk(:, :, :, :)
         complex(dpc), optional, intent(inout) :: cur_vfieldk(:, :, :, :)
 
-        complex(dpc) :: rhs_vfieldk(nx_perproc, ny_half, nz, 6), advect(3), div
+        complex(dpc) :: rhs_vfieldk(nx_perproc, ny_half, nz, 6), advect(3), advect_(3), div
         real(dp) :: rhs_vfieldxx(nyy, nzz_perproc, nxx, 5), u_out_u(6), trace
 
         integer(i4) :: n, i, j
@@ -110,16 +110,18 @@ module rhs
 
                 if(LES) advect(j) = advect(j) - rhs_div_model_vfieldk(ix, iy, iz, j)
 
+                advect_(j) = advect(j)
+
             end do
 
-            if(MHD) advect(2) = advect(2) + nabla(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * (Ha**2/Re)
+            if(MHD) advect_(2) = advect(2) + nabla(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * (Ha**2/Re)
 
-            if(rayleigh_friction) advect(2) = advect(2) + nabla(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * sigma_R
+            if(rayleigh_friction) advect_(2) = advect(2) + nabla(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * sigma_R
 
             ! Pressure terms
             div = 0
             do n = 1, 3
-                div = div + vfield_coordinatek(ix,iy,iz,n) * advect(n)
+                div = div + vfield_coordinatek(ix,iy,iz,n) * advect_(n)
             end do
 
             do n = 1, 3
