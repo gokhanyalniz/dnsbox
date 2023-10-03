@@ -110,10 +110,11 @@ module rhs
 
                 if(LES) advect(j) = advect(j) - rhs_div_model_vfieldk(ix, iy, iz, j)
 
-                if(MHD) advect(j) = advect(j) + nabla(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * (Ha**2/Re)
-
-                if(rayleigh_friction) advect(j) = advect(j) + nabla(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * sigma_R
             end do
+
+            if(MHD) advect(2) = advect(2) + nabla(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * (Ha**2/Re)
+
+            if(rayleigh_friction) advect(2) = advect(2) + nabla(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * sigma_R
 
             ! Pressure terms
             div = 0
