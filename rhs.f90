@@ -121,8 +121,9 @@ module rhs
             ! Pressure terms
             div = 0
             do n = 1, 3
-                div = div + vfield_coordinatek(ix,iy,iz,n) * advect(n) - advect_
+                div = div + vfield_coordinatek(ix,iy,iz,n) * advect(n)
             end do
+            div = div - advect_
 
             do n = 1, 3
                 fvel_vfieldk(ix,iy,iz,n) = advect(n) &
