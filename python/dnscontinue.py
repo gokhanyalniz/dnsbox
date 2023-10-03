@@ -110,7 +110,7 @@ def dnscontinue(rundir, i_finish_plus=None, noray=False, script=None, newdir=Fal
                     except:
                         f.write(line)
     else:
-        copy(stateout, rundir_out / stateout.name)
+        copy(stateout, rundir_out / "state.000000")
         for f in rundir.glob("*.slurm"):
             copy(f, rundir_out / f.name)
 
