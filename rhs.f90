@@ -113,6 +113,7 @@ module rhs
 
             end do
 
+            advect_ = 0
             if(MHD) advect_ = advect_ + vfield_coordinatek(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * (Ha**2/Re)
 
             if(rayleigh_friction) advect_ = advect_ + vfield_coordinatek(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * sigma_R
