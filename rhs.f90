@@ -123,7 +123,7 @@ module rhs
             do n = 1, 3
                 div = div + vfield_coordinatek(ix,iy,iz,n) * advect(n)
             end do
-            div = div - advect_
+            div = div + advect_
 
             do n = 1, 3
                 fvel_vfieldk(ix,iy,iz,n) = advect(n) &
