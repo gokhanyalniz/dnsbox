@@ -54,7 +54,7 @@ def dnsreroot(rundir, newroot, i_finish_plus=None, noray=False):
         parameters["termination"]["i_finish"] += i_finish_plus
 
     if noray:
-        parameters["physics"]["sigma_r"] = 0.0
+        parameters["physics"]["sigma_r"] = 0
 
     parameters["initiation"]["t_start"] = 0
     dns.writeParameters(parameters, rundir_out / "parameters.in")

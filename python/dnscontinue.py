@@ -72,7 +72,7 @@ def dnscontinue(rundir, i_finish_plus=None, noray=False, script=None, newdir=Fal
         parameters["termination"]["i_finish"] += i_finish_plus
 
     if noray:
-        parameters["physics"]["sigma_r"] = False
+        parameters["physics"]["sigma_r"] = 0
 
     if not newdir:
         stat_file = rundir / "stat.gp"
