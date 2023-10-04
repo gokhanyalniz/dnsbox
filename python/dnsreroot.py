@@ -34,7 +34,7 @@ def main():
     dnsreroot(**args)
 
 
-def dnscontinue(rundir, newroot, i_finish_plus=None, noray=False):
+def dnsreroot(rundir, newroot, i_finish_plus=None, noray=False):
 
     rundir = Path(rundir)
     newroot = Path(newroot)
