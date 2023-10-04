@@ -23,6 +23,11 @@ def main():
         help="number of time steps to add to i_finish",
     )
     parser.add_argument(
+        "--force0",
+        action="store_true",
+        dest="force0",
+    )
+    parser.add_argument(
         "--noray",
         action="store_true",
         dest="noray",
@@ -43,7 +48,7 @@ def main():
     dnscontinue(**args)
 
 
-def dnscontinue(rundir, i_finish_plus=None, noray=False, script=None, newdir=False):
+def dnscontinue(rundir, i_finish_plus=None, force0=False, noray=False, script=None, newdir=False):
 
     rundir = Path(rundir)
     if not newdir:
@@ -53,6 +58,11 @@ def dnscontinue(rundir, i_finish_plus=None, noray=False, script=None, newdir=Fal
         makedirs(rundir_out)
 
     states = sorted(list(rundir.glob("state.*")))
+    if force0:
+        if not Path.is_file(rundir / "state.000000"):
+            exit("state0 not found.")
+        i_final_state = 0
+        stateout = states[0]
     if len(states) > 2:
         i_final_state = int(states[-2].name[-6:])
         stateout = states[-2]
@@ -74,7 +84,10 @@ def dnscontinue(rundir, i_finish_plus=None, noray=False, script=None, newdir=Fal
     if noray:
         parameters["physics"]["sigma_r"] = 0
 
-    if not newdir:
+    if force0:
+        t_final_state = 0
+        parameters["initiation"]["t_start"] = 0
+    elif not newdir:
         stat_file = rundir / "stat.gp"
         if Path.is_file(stat_file):
             stats = np.loadtxt(rundir / "stat.gp")
