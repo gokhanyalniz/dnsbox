@@ -63,7 +63,7 @@ def dnscontinue(rundir, i_finish_plus=None, force0=False, noray=False, script=No
             exit("state0 not found.")
         i_final_state = 0
         stateout = states[0]
-    if len(states) > 2:
+    elif len(states) > 2:
         i_final_state = int(states[-2].name[-6:])
         stateout = states[-2]
     else:
@@ -71,13 +71,14 @@ def dnscontinue(rundir, i_finish_plus=None, force0=False, noray=False, script=No
         stateout = states[-1]
 
     parameters = dns.readParameters(rundir / "parameters.in")
-    if not newdir:
+    if not newdir or not force0:
         parameters["initiation"]["ic"] = i_final_state
         itime_final = i_final_state * parameters["output"]["i_save_fields"]
         parameters["initiation"]["i_start"] = itime_final
     else:
         parameters["initiation"]["ic"] = 0
         parameters["initiation"]["i_start"] = 0
+
     if i_finish_plus is not None:
         parameters["termination"]["i_finish"] += i_finish_plus
 
