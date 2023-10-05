@@ -310,7 +310,7 @@ def dnsstats(
     if frac:
         figf, axf = plt.subplots()
         axf.set_xlabel(timeLabel)
-        axf.set_ylabel("$F$")
+        axf.set_ylabel("$v^2$")
         if frac0:
             axf.plot(fracs[:, 1], fracs[:, 2], label="code")
 
