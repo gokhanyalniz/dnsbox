@@ -17,17 +17,14 @@ def main():
     parser.add_argument(
         "Re_i",
         type=float,
-        dest="Rei",
     )
     parser.add_argument(
         "Re_f",
         type=float,
-        dest="Ref",
     )
     parser.add_argument(
         "Re_delta",
         type=float,
-        dest="Ref",
     )
 
     args = vars(parser.parse_args())
@@ -47,7 +44,7 @@ def dnscreateruns(parentdir, Re_i, Re_f, Re_delta):
     parameters["initiation"]["t_start"] = 0
 
     Res = np.arange(Re_i, Re_f, Re_delta)
-    for iRe in range(Res):
+    for iRe in range(len(Res)):
         Re = Res[iRe]
         dirname = f"re{Re:.2f}"
         outdir = parentdir / dirname
