@@ -58,13 +58,25 @@ def main():
         dest="onlynew",
         help="set ti to the continuation time.",
     )
+    parser.add_argument(
+        "-cutinitial",
+        type=float,
+        dest="cutinitial",
+        help="percentage of data to truncate from the beginning"
+    )
+    parser.add_argument(
+        "-cutfinal",
+        type=float,
+        dest="cutfinal",
+        help="percentage of data to truncate from the end"
+    )
     args = vars(parser.parse_args())
 
     dnsstats(**args)
 
 
 def dnsstats(
-    runDir, Ni, Nf, tfilter=False, noshow=False, tex=False, diet=False, old=False, onlynew=False,
+    runDir, Ni, Nf, tfilter=False, noshow=False, tex=False, diet=False, old=False, onlynew=False, cutinitial=None, cutfinal=None,
 ):
 
     dns.setPlotDefaults(tex=tex)
@@ -161,7 +173,7 @@ def dnsstats(
         else:
             title = f"$\\mathrm{{Re}}={Re:.1f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $N=({nx},{ny},{nz})$"
 
-    if not tfilter or retfilter:
+    if not tfilter or retfilter or cutinitial is not None or cutfinal is not None:
         tmins = [np.amin(stats[:,1])]
         tmaxs = [np.amax(stats[:,1])]
         if mhd:
@@ -180,6 +192,15 @@ def dnsstats(
         else:
             Ni = Ni_
             Nf = Nf_
+
+        total = Nf - Ni
+        if cutinitial is not None:
+            cuti = (cutinitial / 100) * total
+            Ni = Ni + cuti
+
+        if cutfinal is not None:
+            cutf = (cutfinal / 100) * total
+            Nf = Nf - cutf
 
         tfilter = True
 
