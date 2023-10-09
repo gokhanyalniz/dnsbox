@@ -328,6 +328,14 @@ def dnsstats(
     axdis.set_title(title)
     figdis.savefig(figuresDir / "dissip.png")
 
+    # dE/dt
+    figdotE, axdotE = plt.subplots()
+    axdotE.set_xlabel(timeLabel)
+    axdotE.set_ylabel("$\\dot{E} / I_L$")
+    axdotE.plot(stats[:, 1], (Production - Dissipation) / Edotlam)
+    axdotE.set_title(title)
+    figdotE.savefig(figuresDir / "dotE.png")
+
     if frac:
         figf, axf = plt.subplots()
         axf.set_xlabel(timeLabel)
