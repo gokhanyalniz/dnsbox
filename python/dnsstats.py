@@ -155,6 +155,11 @@ def dnsstats(
         fracs = np.loadtxt(runDir / fracfile, ndmin=2)
         frac = True
         frac0 = True
+    else:
+        frac0 = False
+
+    if not (mhd or ray or frac0):
+        frac = False
 
     Lx = nml["grid"]["Lx"]
     Lz = nml["grid"]["Lz"]
