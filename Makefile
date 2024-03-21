@@ -1,14 +1,10 @@
-# Assumes fftw3, lapack and BLAS are installed to HOMELOCAL, 
-# if not already within the paths the compiler looks for
+# Export MKLROOT in your session to Intel MKL's installation folder. 
+# For example:
+# export MKLROOT=${HOME}/usr/intel/mkl
 MPIF90 = mpifort
-# -Warray-temporaries
-FCFLAGS = -ffpe-trap=invalid,zero,overflow -Wall -Wextra \
-		  -Wno-missing-include-dirs -fimplicit-none -fexternal-blas \
-		  -ffree-line-length-none -x f95-cpp-input -flto -c -O3 -m64 \
-		  -I${HOMELOCAL}/include -I/usr/include 
-LDFLAGS = -L${HOMELOCAL}/lib -L/usr/local \
-		  -lfftw3 -lblas -llapack\
-		  
+COMPILER_ = icx
+FCFLAGS = -diag-disable=10448 -c -O3 -fpp -heap-arrays -mcmodel=medium -fp-model consistent -fpconstant -I${USRLOCAL}/include -I${MKLROOT}/include/mkl/intel64/lp64 -I${MKLROOT}/include -qmkl=sequential
+LDFLAGS = -L${USRLOCAL}/lib -lfftw3 -L${MKLROOT}/lib/intel64/libmkl_blas95_lp64.a ${MKLROOT}/lib/intel64/libmkl_lapack95_lp64.a -L${MKLROOT}/lib/intel64/ -L${MKLROOT}/lib -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
 
 # Modules
 MODULES = numbers.o\
@@ -37,34 +33,29 @@ UTILS 	= utilities/newton.o\
 
 # -------------------------------------------------------
 
-all:  $(MODULES) main.o 
-	  $(MPIF90) $(MODULES) main.o  -o dns.x $(LDFLAGS)
+all:  $(MODULES) main.f90
+	  $(MPIF90) $(FCFLAGS) main.f90
+	  $(MPIF90)  -diag-disable=10448 -o dns.x main.o $(MODULES) $(LDFLAGS)
+	  $(COMPILER_) -diag-disable=10448 -fPIC -c fakeintel.c
+	  $(COMPILER_) -diag-disable=10448 -shared -o libfakeintel.so fakeintel.o
 
 # -------------------------------------------------------
 
-utils: $(MODULES) $(UTILS)
-	   $(MPIF90) $(MODULES) newton.o -o newton.x $(LDFLAGS)
-	   $(MPIF90) $(MODULES) eigen.o -o eigen.x $(LDFLAGS)
+# utils: $(MODULES) $(UTILS)
+# 	   $(MPIF90) $(MODULES) newton.o -o newton.x $(LDFLAGS)
+# 	   $(MPIF90) $(MODULES) eigen.o -o eigen.x $(LDFLAGS)
 	   
-# -------------------------------------------------------
-
-test: $(MODULES) test.o
-	  $(MPIF90) $(MODULES) test.o  -o test.x $(LDFLAGS)
-	  rm -rf test 
-	  mkdir test
-	  cp parameters.in test
-	  cp test.x test
-	  cd test; ./test.x; cat d0000.txt
-
 # -------------------------------------------------------
 
 # compile
 
+# $(OBJ): $(MODULES) 
+
 %.o: %.f
 	$(MPIF90) $(FCFLAGS) $<
 
-parameters.o: parameters.f90
-			  bash version.sh && $(MPIF90) $(FCFLAGS) $<
+m_parameters.o: m_parameters.f90
+				bash version.sh && $(MPIF90) $(FCFLAGS) $<
 
 %.o: %.f90
 	 $(MPIF90) $(FCFLAGS) $<
