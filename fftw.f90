@@ -134,6 +134,26 @@ module fftw
             fftw_sfieldxx, [2 * nyy_half_pad1 ], 1, 2 * nyy_half_pad1 , &
             FFTW_ESTIMATE)
 
+        if (i_save_midplane > 0) then
+            p_plan_z_backward_0 = fftw_plan_many_dft(&
+                1, [nz], ny_half * nx_perproc, &
+                fftw_sfieldkx_tmp1(:, :, :), [nz], ny_half * nx_perproc, 1, &
+                fftw_sfieldkx_tmp1(:, :, :), [nz], ny_half * nx_perproc, 1, &
+                FFTW_BACKWARD, FFTW_ESTIMATE)
+
+            p_plan_x_backward_0 = fftw_plan_many_dft(&
+                1, [nx], ny_half * nz_perproc, &
+                fftw_sfieldkx_tmp2(:, :, :), [nx], ny_half * nz_perproc, 1, &
+                fftw_sfieldkx_tmp2(:, :, :), [nx], ny_half * nz_perproc, 1, &
+                FFTW_BACKWARD, FFTW_ESTIMATE)
+
+            p_plan_y_backward_0 = fftw_plan_many_dft_c2r(&
+                1, [ny], nz_perproc * nx, &
+                fftw_sfieldkx, [ny_half_pad1], 1, ny_half_pad1 , &
+                fftw_sfieldxx, [2 * ny_half_pad1], 1, 2 * ny_half_pad1 , &
+                FFTW_ESTIMATE)
+        endif
+
         ! wavenumbers
 
         ! kx are shared among processes

@@ -14,7 +14,8 @@ module parameters
         nyy_half_pad1, & ! nyy/2+1 are frequently used in r2c 
                                  ! transforms see "2.3 One-Dimensional DFTs of
                                  ! Real Data" / fftw3 manual
-        nx_perproc, nzz_perproc
+        nx_perproc, nzz_perproc, &
+        nz_0, nz_perproc, ny_half_pad1
 
     integer(i4), parameter :: supsamp_fac = 3 ! supsamp_fac / 2 dealiasing
 
@@ -54,7 +55,8 @@ module parameters
                    i_print_spectrum = -1, &
                    i_flush = -1, &
                    i_project = -1, &
-                   i_slice_project = -1
+                   i_slice_project = -1, &
+                   i_save_midplane = -1
 
     !# Time stepping 
     real(dp)    :: dt = 0.025_dp, &
@@ -206,14 +208,23 @@ module parameters
         nzz = supsamp_fac * nz_half
 
         nyy_half_pad1 = nyy / 2 + 1
+        ny_half_pad1 = ny / 2 + 1
 
         nzz_perproc  = nzz / num_procs
+        nz_0 = nz
+        nz_perproc  = nz_0 / num_procs
 
         ! Pad z in the physical dimension if necessary to make it divisible
         ! by num_procs
         if (nzz_perproc * num_procs /= nzz) then
             nzz_perproc = nzz_perproc + 1
             nzz = nzz_perproc * num_procs
+
+        end if
+
+        if (nz_perproc * num_procs /= nz_0) then
+            nz_perproc = nz_perproc + 1
+            nz_0 = nz_perproc * num_procs
 
         end if
 
@@ -232,6 +243,13 @@ module parameters
             write(out, *) '*** num_procs too large:', num_procs, & 
                           '*** nx_perproc:', nx_perproc, &
                           '*** nzz_perproc:', nzz_perproc
+            flush(out)
+            error stop
+        end if
+
+        if (i_save_midplane .and. nz_perproc <= 1) then
+            write(out, *) '*** num_procs too large:', num_procs, & 
+                          '*** nz_perproc:', nz_perproc
             flush(out)
             error stop
         end if
