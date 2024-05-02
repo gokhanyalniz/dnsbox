@@ -17,11 +17,15 @@ module fftw
     ! field arrays for fft
     complex(dpc), pointer, dimension(:, :, :) :: &
         fftw_sfieldk, fftw_sfieldkx, fftw_sfieldkx_tmp1, fftw_sfieldkx_tmp1_t, &
-        fftw_sfieldkx_tmp2
+        fftw_sfieldkx_tmp2, &
+        fftw_sfieldkx_0, fftw_sfieldkx_tmp1_0, fftw_sfieldkx_tmp1_t_0, fftw_sfieldkx_tmp2_0
     real(dp), pointer :: fftw_sfieldxx(:, :, :)
 
     type(C_PTR) :: p_fftw_sfieldk, p_fftw_sfieldxx, p_fftw_sfieldkx_tmp1, &
-        p_fftw_sfieldkx_tmp2
+        p_fftw_sfieldkx_tmp2, &
+        p_fftw_sfieldkx_0, p_fftw_sfieldkx_tmp1_0, p_fftw_sfieldkx_tmp2_0
+
+
 
     real(dp), allocatable, dimension(:) :: kx, ky, kz ! wave numbers
     integer(i4), allocatable, dimension(:) :: qx, qy, qz ! integer wave numbers
@@ -77,10 +81,35 @@ module fftw
         ! fftw_sfieldkx_tmp2 has its own memory
         call c_f_pointer(p_fftw_sfieldkx_tmp2, fftw_sfieldkx_tmp2, [ny_half, nzz_perproc, nxx])
 
+        if (i_save_midplane > 0) then
+            !
+            p_fftw_sfieldkx_0 = fftw_alloc_complex(& 
+                int(ny_half_pad1  * nz_perproc * nx, i8))
+            call c_f_pointer(&
+            p_fftw_sfieldkx_0, fftw_sfieldkx_0, [ny_half_pad1 , nz_perproc, nx])
+
+            p_fftw_sfieldkx_tmp1_0 = fftw_alloc_complex(int(ny_half * nx_perproc * nz, i8))
+            ! fftw_sfieldkx_tmp1 and fftw_sfieldkx_tmp1_t share memory
+            call c_f_pointer(p_fftw_sfieldkx_tmp1_0, fftw_sfieldkx_tmp1_0,   &
+                            [ny_half, nx_perproc,  nz])
+            call c_f_pointer(p_fftw_sfieldkx_tmp1_0, fftw_sfieldkx_tmp1_t_0, &
+                            [ny_half, nz_perproc, nx])
+
+            p_fftw_sfieldkx_tmp2_0 = fftw_alloc_complex(int(ny_half * nz_perproc * nx, i8))
+            ! fftw_sfieldkx_tmp2 has its own memory
+            call c_f_pointer(p_fftw_sfieldkx_tmp2_, fftw_sfieldkx_tmp2_0, [ny_half, nz_perproc, nx])
+        endif
+
         fftw_sfieldk = 0
         fftw_sfieldxx = 0
         fftw_sfieldkx_tmp1 = 0
         fftw_sfieldkx_tmp2 = 0
+        
+        if (i_save_midplane > 0) then
+            fftw_sfieldkx_0 = 0
+            fftw_sfieldkx_tmp1 = 0
+            fftw_sfieldkx_tmp2 = 0
+        endif
         
     end subroutine fftw_allocate
 
@@ -134,25 +163,25 @@ module fftw
             fftw_sfieldxx, [2 * nyy_half_pad1 ], 1, 2 * nyy_half_pad1 , &
             FFTW_ESTIMATE)
 
-        ! if (i_save_midplane > 0) then
-        !     p_plan_z_backward_0 = fftw_plan_many_dft(&
-        !         1, [nz], ny_half * nx_perproc, &
-        !         fftw_sfieldkx_tmp1(:, :, :), [nz], ny_half * nx_perproc, 1, &
-        !         fftw_sfieldkx_tmp1(:, :, :), [nz], ny_half * nx_perproc, 1, &
-        !         FFTW_BACKWARD, FFTW_ESTIMATE)
+        if (i_save_midplane > 0) then
+            p_plan_z_backward_0 = fftw_plan_many_dft(&
+                1, [nz], ny_half * nx_perproc, &
+                fftw_sfieldkx_tmp1_0(:, :, :), [nz], ny_half * nx_perproc, 1, &
+                fftw_sfieldkx_tmp1_0(:, :, :), [nz], ny_half * nx_perproc, 1, &
+                FFTW_BACKWARD, FFTW_ESTIMATE)
 
-        !     p_plan_x_backward_0 = fftw_plan_many_dft(&
-        !         1, [nx], ny_half * nz_perproc, &
-        !         fftw_sfieldkx_tmp2(:, :, :), [nx], ny_half * nz_perproc, 1, &
-        !         fftw_sfieldkx_tmp2(:, :, :), [nx], ny_half * nz_perproc, 1, &
-        !         FFTW_BACKWARD, FFTW_ESTIMATE)
+            p_plan_x_backward_0 = fftw_plan_many_dft(&
+                1, [nx], ny_half * nz_perproc, &
+                fftw_sfieldkx_tmp2_0(:, :, :), [nx], ny_half * nz_perproc, 1, &
+                fftw_sfieldkx_tmp2_0(:, :, :), [nx], ny_half * nz_perproc, 1, &
+                FFTW_BACKWARD, FFTW_ESTIMATE)
 
-        !     p_plan_y_backward_0 = fftw_plan_many_dft_c2r(&
-        !         1, [ny], nz_perproc * nx, &
-        !         fftw_sfieldkx, [ny_half_pad1], 1, ny_half_pad1 , &
-        !         fftw_sfieldxx, [2 * ny_half_pad1], 1, 2 * ny_half_pad1 , &
-        !         FFTW_ESTIMATE)
-        ! endif
+            p_plan_y_backward_0 = fftw_plan_many_dft_c2r(&
+                1, [ny], nz_perproc * nx, &
+                fftw_sfieldkx_0, [ny_half_pad1], 1, ny_half_pad1 , &
+                fftw_sfieldxx_0, [2 * ny_half_pad1], 1, 2 * ny_half_pad1 , &
+                FFTW_ESTIMATE)
+        endif
 
         ! wavenumbers
 
