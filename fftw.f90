@@ -19,13 +19,12 @@ module fftw
         fftw_sfieldk, fftw_sfieldkx, fftw_sfieldkx_tmp1, fftw_sfieldkx_tmp1_t, &
         fftw_sfieldkx_tmp2, &
         fftw_sfieldkx_0, fftw_sfieldkx_tmp1_0, fftw_sfieldkx_tmp1_t_0, fftw_sfieldkx_tmp2_0
-    real(dp), pointer :: fftw_sfieldxx(:, :, :)
+    real(dp), pointer :: fftw_sfieldxx(:, :, :), &
+        fftw_sfieldx(:, :, :)
 
     type(C_PTR) :: p_fftw_sfieldk, p_fftw_sfieldxx, p_fftw_sfieldkx_tmp1, &
         p_fftw_sfieldkx_tmp2, &
-        p_fftw_sfieldkx_0, p_fftw_sfieldkx_tmp1_0, p_fftw_sfieldkx_tmp2_0
-
-
+        p_fftw_sfieldx, p_fftw_sfieldkx_tmp1_0, p_fftw_sfieldkx_tmp2_0
 
     real(dp), allocatable, dimension(:) :: kx, ky, kz ! wave numbers
     integer(i4), allocatable, dimension(:) :: qx, qy, qz ! integer wave numbers
@@ -38,7 +37,8 @@ module fftw
 
     ! fftw plans
     type(C_PTR) :: p_plan_x_forward,  p_plan_y_forward,  p_plan_z_forward, &
-                   p_plan_x_backward, p_plan_y_backward, p_plan_z_backward
+                   p_plan_x_backward, p_plan_y_backward, p_plan_z_backward, &
+                   p_plan_x_backward_0, p_plan_y_backward_0, p_plan_z_backward_0
 
     ! benchmarking
     real(sp)    :: time_fftw = 0, time_local_transpose = 0, &
@@ -82,22 +82,24 @@ module fftw
         call c_f_pointer(p_fftw_sfieldkx_tmp2, fftw_sfieldkx_tmp2, [ny_half, nzz_perproc, nxx])
 
         if (i_save_midplane > 0) then
-            !
-            p_fftw_sfieldkx_0 = fftw_alloc_complex(& 
-                int(ny_half_pad1  * nz_perproc * nx, i8))
+            p_fftw_sfieldx = fftw_alloc_complex(& 
+            int(ny_half_pad1  * nz_perproc * nx, i8))
+            ! fftw_sfieldx and fftw_sfieldkx_0 share memory
             call c_f_pointer(&
-            p_fftw_sfieldkx_0, fftw_sfieldkx_0, [ny_half_pad1 , nz_perproc, nx])
+                p_fftw_sfieldx, fftw_sfieldx, [2 * ny_half_pad1 , nz_perproc, nx])
+            call c_f_pointer(&
+                p_fftw_sfieldx, fftw_sfieldkx_0, [ny_half_pad1 , nz_perproc, nx])
 
-            p_fftw_sfieldkx_tmp1_0 = fftw_alloc_complex(int(ny_half * nx_perproc * nz, i8))
-            ! fftw_sfieldkx_tmp1 and fftw_sfieldkx_tmp1_t share memory
+            p_fftw_sfieldkx_tmp1_0 = fftw_alloc_complex(int(ny_half * nx_perproc * nz_0, i8))
+            ! fftw_sfieldkx_tmp1_0 and fftw_sfieldkx_tmp1_t_0 share memory
             call c_f_pointer(p_fftw_sfieldkx_tmp1_0, fftw_sfieldkx_tmp1_0,   &
-                            [ny_half, nx_perproc,  nz])
+                            [ny_half, nx_perproc,  nz_0])
             call c_f_pointer(p_fftw_sfieldkx_tmp1_0, fftw_sfieldkx_tmp1_t_0, &
                             [ny_half, nz_perproc, nx])
 
             p_fftw_sfieldkx_tmp2_0 = fftw_alloc_complex(int(ny_half * nz_perproc * nx, i8))
             ! fftw_sfieldkx_tmp2 has its own memory
-            call c_f_pointer(p_fftw_sfieldkx_tmp2_, fftw_sfieldkx_tmp2_0, [ny_half, nz_perproc, nx])
+            call c_f_pointer(p_fftw_sfieldkx_tmp2_0, fftw_sfieldkx_tmp2_0, [ny_half, nz_perproc, nx])
         endif
 
         fftw_sfieldk = 0
@@ -106,9 +108,9 @@ module fftw
         fftw_sfieldkx_tmp2 = 0
         
         if (i_save_midplane > 0) then
-            fftw_sfieldkx_0 = 0
-            fftw_sfieldkx_tmp1 = 0
-            fftw_sfieldkx_tmp2 = 0
+            fftw_sfieldx = 0
+            fftw_sfieldkx_tmp1_0 = 0
+            fftw_sfieldkx_tmp2_0 = 0
         endif
         
     end subroutine fftw_allocate
@@ -165,7 +167,7 @@ module fftw
 
         if (i_save_midplane > 0) then
             p_plan_z_backward_0 = fftw_plan_many_dft(&
-                1, [nz], ny_half * nx_perproc, &
+                1, [nz_0], ny_half * nx_perproc, &
                 fftw_sfieldkx_tmp1_0(:, :, :), [nz], ny_half * nx_perproc, 1, &
                 fftw_sfieldkx_tmp1_0(:, :, :), [nz], ny_half * nx_perproc, 1, &
                 FFTW_BACKWARD, FFTW_ESTIMATE)
@@ -179,7 +181,7 @@ module fftw
             p_plan_y_backward_0 = fftw_plan_many_dft_c2r(&
                 1, [ny], nz_perproc * nx, &
                 fftw_sfieldkx_0, [ny_half_pad1], 1, ny_half_pad1 , &
-                fftw_sfieldxx_0, [2 * ny_half_pad1], 1, 2 * ny_half_pad1 , &
+                fftw_sfieldx, [2 * ny_half_pad1], 1, 2 * ny_half_pad1 , &
                 FFTW_ESTIMATE)
         endif
 
@@ -462,6 +464,87 @@ module fftw
             call cpu_time(timer_start)
             call fftw_execute_dft_c2r(p_plan_y_backward, &
                     fftw_sfieldkx(:, :, :), fftw_sfieldxx(:, :, :))
+            call cpu_time(timer_stop)
+            time_fftw = time_fftw + timer_stop - timer_start
+
+        else if (flag == 0) then
+
+            ! spectral to physical with no grid expansion
+            ! fftw_sfieldk -> fftw_sfieldx
+
+            ! expand z: fftw_sfieldk -> fftw_sfieldkx_tmp1
+            call cpu_time(timer_start)
+            fftw_sfieldkx_tmp1_0(:, :, :) = 0
+            do iz = 1, nz_half
+                do iy = 1, ny_half
+                    do ix = 1, nx_perproc
+                        if (ix_max /= -1 .and. ix == ix_max) cycle
+                        ! non-negative
+                        fftw_sfieldkx_tmp1_0(iy, ix, iz) = fftw_sfieldk(ix, iy, iz)
+                        ! negative
+                        if (iz <= nz_half - 1) then
+                            fftw_sfieldkx_tmp1_0(iy, ix, 1 + nz_0 - nz_half + iz) &
+                                                = fftw_sfieldk(ix, iy, nz_half + 1 + iz)
+                        end if
+                    end do
+                end do
+            end do
+            call cpu_time(timer_stop)
+            time_local_transpose = time_local_transpose + timer_stop - timer_start
+            
+            ! do z: fftw_sfieldkx_tmp1 -> fftw_sfieldkx_tmp1, in-place
+            call cpu_time(timer_start)
+            call fftw_execute_dft(p_plan_z_backward_0, fftw_sfieldkx_tmp1_0, fftw_sfieldkx_tmp1_0)
+            call cpu_time(timer_stop)
+            time_fftw = time_fftw + timer_stop - timer_start
+
+            ! transpose: fftw_sfieldkx_tmp1 -> fftw_sfieldkx_tmp1_t, in-place with temporary arrays
+            call fftw_transpose(ny_half, nx, nz_0, fftw_sfieldkx_tmp1_0, fftw_sfieldkx_tmp1_t_0)
+
+            ! expand x: fftw_sfieldkx_tmp1_t -> fftw_sfieldkx_tmp2
+            call cpu_time(timer_start)
+            fftw_sfieldkx_tmp2_0(:, :, :) = 0
+            do ix = 1, nx_half
+                do iz = 1, nz_perproc
+                    do iy = 1, ny_half
+                        ! non-negative
+                        fftw_sfieldkx_tmp2_0(iy, iz, ix) = fftw_sfieldkx_tmp1_t_0(iy, iz, ix)
+                        ! negative
+                        if (ix <= nx_half - 1) then
+                            ! x has one zeroed mode (maximum positive)
+                            fftw_sfieldkx_tmp2_0(iy, iz, 1 + nx - nx_half + ix) &
+                                            = fftw_sfieldkx_tmp1_t_0(iy, iz, nx_half + 1 + ix)
+                        end if
+                    end do
+                end do
+            end do
+            call cpu_time(timer_stop)
+            time_local_transpose = time_local_transpose + timer_stop - timer_start
+
+            ! do x: fftw_sfieldkx_tmp2 -> fftw_sfieldkx_tmp2, in-place
+            call cpu_time(timer_start)
+            call fftw_execute_dft(p_plan_x_backward_0, fftw_sfieldkx_tmp2_0, fftw_sfieldkx_tmp2_0)
+            call cpu_time(timer_stop)
+            time_fftw = time_fftw + timer_stop - timer_start
+
+            ! expand y: fftw_sfieldkx_tmp2 -> fftw_sfieldkx
+            call cpu_time(timer_start)
+            fftw_sfieldkx(:, :, :) = 0
+            do ix = 1, nx
+                do iz = 1, nz_perproc
+                    do iy = 1, ny_half
+                        ! non-negative
+                        fftw_sfieldkx_0(iy, iz, ix) = fftw_sfieldkx_tmp2_0(iy, iz, ix)
+                    end do
+                end do
+            end do
+            call cpu_time(timer_stop)
+            time_local_transpose = time_local_transpose + timer_stop - timer_start
+
+            ! do y: fftw_sfieldkx -> fftw_sfieldxx, in-place
+            call cpu_time(timer_start)
+            call fftw_execute_dft_c2r(p_plan_y_backward_0, &
+                    fftw_sfieldkx_0(:, :, :), fftw_sfieldx(:, :, :))
             call cpu_time(timer_stop)
             time_fftw = time_fftw + timer_stop - timer_start
 
