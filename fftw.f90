@@ -597,6 +597,27 @@ module fftw
 
 !==============================================================================
 
+    subroutine fftw_sk2x_0(sfieldk, sfieldx)
+        
+        complex(dpc), intent(in) :: sfieldk(:, :, :)
+        real(dp), intent(out) :: sfieldx(:, :, :)
+        _indices
+        _indicess
+        
+        _loop_spec_begin
+            fftw_sfieldk(ix, iy, iz) = sfieldk(ix, iy, iz)
+        _loop_spec_end
+
+        call fftw_transform(0)
+
+        _loop_phys_0_begin     
+            sfieldx(iy0, iz0, ix0) = fftw_sfieldx(iy0, iz0, ix0)
+        _loop_phys_0_end
+
+    end subroutine fftw_sk2x_0
+
+!==============================================================================
+
     subroutine fftw_vx2k(sfieldxx, sfieldk)
         
         real(dp), intent(in) :: sfieldxx(:, :, :, :)
@@ -622,6 +643,20 @@ module fftw
         end do
 
     end subroutine fftw_vk2x
+
+!==============================================================================
+
+    subroutine fftw_vk2x_0(sfieldk, sfieldx)
+        
+        complex(dpc), intent(in) :: sfieldk(:, :, :, :)
+        real(dp), intent(out) :: sfieldx(:, :, :, :)
+        integer(i4) :: n
+
+        do n=1,3
+            call fftw_sk2x_0(sfieldk(:,:,:,n), sfieldx(:,:,:,n))
+        end do
+
+    end subroutine fftw_vk2x_0
 
 !==============================================================================
     

@@ -12,4 +12,9 @@
 */ do ixx = 1, nxx; do izz = 1, nzz_perproc; do iyy = 1, nyy;
          
 #define _loop_phys_end end do; end do; end do
+
+#define _loop_phys_0_begin /*
+*/ do ix0 = 1, nx; do iz0 = 1, nz_perproc; do iy0 = 1, ny;
+         
+#define _loop_phys_0_end end do; end do; end do
 #endif
