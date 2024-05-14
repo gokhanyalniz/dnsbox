@@ -15,6 +15,8 @@ program main
     use projector
     use lyap
     use symred
+
+    integer :: i_benchmark_iter = 0
     
     ! initialization:
     call run_init
@@ -32,323 +34,346 @@ program main
 
     write(out, *) "Starting time stepping."
 
-    do
-        if (i_finish > 0 .and. itime > i_finish) exit
+    if (i_benchmark > 0) then
 
-        if (i_slice_project > 0 .and. mod(itime, i_slice_project) == 0) &
-            call symred_projections(vel_vfieldk_now)
+        do i_benchmark_iter = 1, i_benchmark
 
-        if (slice .and. &
-            ((i_save_sliced_fields > 0 .and. mod(itime, i_save_sliced_fields) == 0) .or. &
-             (i_project > 0 .and. mod(itime, i_project) == 0) .or. &
-             (i_print_phases > 0 .and. mod(itime, i_print_phases) == 0))) then
+            call fftw_vk2x(vel_vfieldk_now, vel_vfieldxx_now)
+            call fftw_vx2k(vel_vfieldxx_now, vel_vfieldk_now)
 
-            call symred_slice(vel_vfieldk_now, sliced_vel_vfieldk_now)
-            call symred_phases_write
-        end if
+        enddo
 
-        if (i_save_sliced_fields > 0 .and. mod(itime, i_save_sliced_fields) == 0) then
-            write(file_ext, "(i6.6)") itime/i_save_sliced_fields
-            fname = 'sliced_state.'//file_ext
-            call fieldio_write(sliced_vel_vfieldk_now)
-            call run_flush_channels
-        end if
+        call run_exit
 
-        if (i_save_fields > 0 .and. itime > i_start .and. mod(itime, i_save_fields) == 0) then
-            write(file_ext, "(i6.6)") itime/i_save_fields
-            fname = 'state.'//file_ext
-            call fieldio_write(vel_vfieldk_now)
-            call run_flush_channels
-        end if
+    else
 
-        if (adaptive_dt .or. (i_print_steps > 0 .and. mod(itime, i_print_steps) == 0)) then
-            call timestep_courant(vel_vfieldxx_now)
-        end if
+        do
+            if (i_finish > 0 .and. itime > i_finish) exit
 
-        if (adaptive_dt) call timestep_set_dt
+            if (i_slice_project > 0 .and. mod(itime, i_slice_project) == 0) &
+                call symred_projections(vel_vfieldk_now)
 
-        if (i_print_stats > 0 .and. mod(itime, i_print_stats) == 0) then
-            
-            if (MHD) then
-                call stats_compute(vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
-            else
-                call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
+            if (slice .and. &
+                ((i_save_sliced_fields > 0 .and. mod(itime, i_save_sliced_fields) == 0) .or. &
+                (i_project > 0 .and. mod(itime, i_project) == 0) .or. &
+                (i_print_phases > 0 .and. mod(itime, i_print_phases) == 0))) then
+
+                call symred_slice(vel_vfieldk_now, sliced_vel_vfieldk_now)
+                call symred_phases_write
             end if
 
-            if (integrate_invariant .and. itime > i_start) call solver_averaging_update(vel_vfieldk_now)
-
-            if (IC == -3) then
-                ! expected shapiro field
-                call vfield_shapiro(time, shapiro_vfieldk)
-                ! its norm
-                call vfield_norm(shapiro_vfieldk, shapiro_norm, .false.)
-                ! difference from the field now
-                shapiro_vfieldk(:,:,:,1:3) =  shapiro_vfieldk(:,:,:,1:3) - vel_vfieldk_now(:,:,:,1:3)
-                ! delta's norm
-                call vfield_norm(shapiro_vfieldk, shapiro_normdelta, .false.)
-
+            if (i_save_sliced_fields > 0 .and. mod(itime, i_save_sliced_fields) == 0) then
+                write(file_ext, "(i6.6)") itime/i_save_sliced_fields
+                fname = 'sliced_state.'//file_ext
+                call fieldio_write(sliced_vel_vfieldk_now)
+                call run_flush_channels
             end if
 
-        end if
+            if (i_save_fields > 0 .and. itime > i_start .and. mod(itime, i_save_fields) == 0) then
+                write(file_ext, "(i6.6)") itime/i_save_fields
+                fname = 'state.'//file_ext
+                call fieldio_write(vel_vfieldk_now)
+                call run_flush_channels
+            end if
 
-        ! Write stats
-        if (i_print_stats > 0 .and. mod(itime, i_print_stats) == 0) then
-            call stats_write
+            if (i_save_phys > 0 .and. itime > i_start .and. mod(itime, i_save_phys) == 0) then
+                write(file_ext, "(i6.6)") itime/i_save_phys
+                fname = 'phys.'//file_ext
+                call fftw_vk2x_0(vel_vfieldk_now, vel_vfieldx_now)
+                call fieldio_write_phys(vel_vfieldx_now)
+                call run_flush_channels
+            end if
 
-            ! Stop if laminarized
-            if (my_id==0 .and. terminate_laminar) then
+            if (adaptive_dt .or. (i_print_steps > 0 .and. mod(itime, i_print_steps) == 0)) then
+                call timestep_courant(vel_vfieldxx_now)
+            end if
 
-                e_diff = abs(ekin - ekin_lam)/ekin_lam
-                input_diff = abs(powerin - powerin_lam)/powerin_lam
-                diss_diff = abs(dissip - dissip_lam )/dissip_lam 
+            if (adaptive_dt) call timestep_set_dt
+
+            if (i_print_stats > 0 .and. mod(itime, i_print_stats) == 0) then
                 
-                if (e_diff < relerr_lam .and. &
-                    input_diff < relerr_lam .and. diss_diff < relerr_lam) then
-                    kill_switch = .true.
-                    write(out, *) "Laminarized, stopping."
-                    open(newunit=laminarized_ch,file='LAMINARIZED',position='append')
-                    write(laminarized_ch,*) time
-                    close(laminarized_ch)
-                end if
-            end if
-
-            if (IC == -3 .and. my_id == 0) then
-
-                ! shapiro stats
-        
-                inquire(file=TRIM(shapiro_file), exist=there, opened=there2)
-                if (.not.there) then
-                open(newunit=shapiro_ch,file=TRIM(shapiro_file),form='formatted')
-                    write(shapiro_ch,"(A2,"//i4_len//","//"3"//sp_len//")") &
-                        "# ", "itime", "time", "relerr"
-                end if
-                if(there.and..not.there2) then
-                open(newunit=shapiro_ch,file=TRIM(shapiro_file),position='append')
-                end if
-                write(shapiro_ch,"(A2,"//i4_f//","//"3"//sp_f//")")&
-                    "  ", itime, time, shapiro_normdelta / shapiro_norm
-    
-                shapiro_written = .true.
-
-            end if
-
-        end if
-
-        if (i_print_steps > 0 .and. mod(itime, i_print_steps) == 0) call timestep_write
-
-        ! project onto POD basis
-        if (i_project > 0 .and. mod(itime, i_project) == 0) then
-            if (.not. slice) then
-                call projector_project(vel_vfieldk_now)
-            else
-                call projector_project(sliced_vel_vfieldk_now)
-            end if
-            call projector_write
-        end if
-
-        ! spectrum
-        if (i_print_spectrum > 0 .and. mod(itime, i_print_spectrum) == 0) call stats_spectra(vel_vfieldk_now)
-
-        ! Compute divergence
-        if (log_divergence .and. i_print_stats > 0 &
-                    .and. mod(itime, i_print_stats) == 0) call stats_worst_divergence(vel_vfieldk_now)
-
-        ! wall clock limit
-        call cpu_time(cput_now)
-        if (wall_clock_limit > 0 .and. cput_now - cput_start > wall_clock_limit) then
-            write(out, *) "Runtime limit reached, stopping."
-            kill_switch = .true.
-        end if
-
-        ! Broadcast the kill_switch status
-        call MPI_BCAST(kill_switch, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, mpi_err)
-
-        ! Flush manually if desired
-        if (i_flush > 0 .and. mod(itime, i_flush) == 0) then
-            call run_flush_channels
-        end if
-
-        if (kill_switch) then
-            call run_exit
-        end if
-
-        if (poincare) then
-            ! Store the current state for possibly computing
-            ! the U(t*) = Dissipation(t*) - Production(t*) = 0 intersection
-            ! With directional constraint d_t U(t=t*) > 0
-            
-            if ((i_print_stats > 0 .and. .not. (mod(itime, i_print_stats) == 0)) &
-                    .or. i_print_stats <= 0) then
                 if (MHD) then
                     call stats_compute(vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
                 else
                     call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
                 end if
+
+                if (integrate_invariant .and. itime > i_start) call solver_averaging_update(vel_vfieldk_now)
+
+                if (IC == -3) then
+                    ! expected shapiro field
+                    call vfield_shapiro(time, shapiro_vfieldk)
+                    ! its norm
+                    call vfield_norm(shapiro_vfieldk, shapiro_norm, .false.)
+                    ! difference from the field now
+                    shapiro_vfieldk(:,:,:,1:3) =  shapiro_vfieldk(:,:,:,1:3) - vel_vfieldk_now(:,:,:,1:3)
+                    ! delta's norm
+                    call vfield_norm(shapiro_vfieldk, shapiro_normdelta, .false.)
+
+                end if
+
             end if
-        
-            U_poincare = dissip - powerin
-            call MPI_BCAST(U_poincare, 1, MPI_REAL8, 0, MPI_COMM_WORLD, mpi_err)
-            ! Save the field for possibly computing the Poincare
-            ! section intersection
-            vel_vfieldk_before = vel_vfieldk_now
-            vel_vfieldxx_before = vel_vfieldxx_now
-            fvel_vfieldk_before = fvel_vfieldk_now
-            dt_before = dt
-            time_before = time
-        end if
 
-        if (MHD) then
-            call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
-        else
-            call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
-        end if
+            ! Write stats
+            if (i_print_stats > 0 .and. mod(itime, i_print_stats) == 0) then
+                call stats_write
 
-        time = time + dt
-        itime = itime + 1
+                ! Stop if laminarized
+                if (my_id==0 .and. terminate_laminar) then
 
-        if (poincare) then
-            ! Check if there is a Poincare section intersection         
-            if (MHD) then
-                call stats_compute(vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
-            else
-                call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
-            end if
-            U_poincare_next = dissip - powerin
-            call MPI_BCAST(U_poincare_next, 1, MPI_REAL8, 0, MPI_COMM_WORLD, mpi_err)
-            
-            ! If there is an intersection
-            if(U_poincare < 0 .and. U_poincare_next > 0) then
-        
-                ! backup timestepped state
-                vel_vfieldk_after = vel_vfieldk_now
-                vel_vfieldxx_after = vel_vfieldxx_now
-                fvel_vfieldk_after = fvel_vfieldk_now
-                dt_after = dt
-                time_after = time
-                itime_after = itime
-                
-                write(file_ext, "(i6.6)") i_poincare
-                fname = 'poincare.'//file_ext
-                itime = i_poincare
-                if (abs(U_poincare) < eps_poincare) then 
-                    ! previous state satisfies Poincare section condition
-                    time = time_before
-                    dt = dt_before
-                    call fieldio_write(vel_vfieldk_before)
-                else if (abs(U_poincare_next) < eps_poincare) then
-                    ! current state satisfies Poincare section condition
-                    call fieldio_write(vel_vfieldk_now)
-                else
-                    ! intersecting state is inbetween
-        
-                    ! restore to the state before the section
-                    vel_vfieldk_now = vel_vfieldk_before
-                    vel_vfieldxx_now = vel_vfieldxx_before
-                    dt = dt_before
+                    e_diff = abs(ekin - ekin_lam)/ekin_lam
+                    input_diff = abs(powerin - powerin_lam)/powerin_lam
+                    diss_diff = abs(dissip - dissip_lam )/dissip_lam 
                     
-                    ! starting the secant loop
-                    dt_last = dt
-                    i_secant = 0
-                    do
-                        ! guess the time-step
-                        ! sanity check
+                    if (e_diff < relerr_lam .and. &
+                        input_diff < relerr_lam .and. diss_diff < relerr_lam) then
+                        kill_switch = .true.
+                        write(out, *) "Laminarized, stopping."
+                        open(newunit=laminarized_ch,file='LAMINARIZED',position='append')
+                        write(laminarized_ch,*) time
+                        close(laminarized_ch)
+                    end if
+                end if
 
-                        dt = dt_last / (1 - U_poincare_next / U_poincare)
-                        if (dt < 0) then
-                            write(out, *) "Poincare: Secant method failed. dt = ", dt, "it = ", itime_after
-                            call run_flush_channels
-                            call run_exit
-                        end if
+                if (IC == -3 .and. my_id == 0) then
 
-                        if (MHD) then
-                            call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
-                        else
-                            call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
-                        end if
-                        time = time_before + dt
-                        if (MHD) then
-                            call stats_compute(vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
-                        else
-                            call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
-                        end if
-                        U_poincare_next = dissip - powerin
-                        call MPI_BCAST(U_poincare_next, 1, MPI_REAL8, 0, MPI_COMM_WORLD, mpi_err)
+                    ! shapiro stats
+            
+                    inquire(file=TRIM(shapiro_file), exist=there, opened=there2)
+                    if (.not.there) then
+                    open(newunit=shapiro_ch,file=TRIM(shapiro_file),form='formatted')
+                        write(shapiro_ch,"(A2,"//i4_len//","//"3"//sp_len//")") &
+                            "# ", "itime", "time", "relerr"
+                    end if
+                    if(there.and..not.there2) then
+                    open(newunit=shapiro_ch,file=TRIM(shapiro_file),position='append')
+                    end if
+                    write(shapiro_ch,"(A2,"//i4_f//","//"3"//sp_f//")")&
+                        "  ", itime, time, shapiro_normdelta / shapiro_norm
+        
+                    shapiro_written = .true.
+
+                end if
+
+            end if
+
+            if (i_print_steps > 0 .and. mod(itime, i_print_steps) == 0) call timestep_write
+
+            ! project onto POD basis
+            if (i_project > 0 .and. mod(itime, i_project) == 0) then
+                if (.not. slice) then
+                    call projector_project(vel_vfieldk_now)
+                else
+                    call projector_project(sliced_vel_vfieldk_now)
+                end if
+                call projector_write
+            end if
+
+            ! spectrum
+            if (i_print_spectrum > 0 .and. mod(itime, i_print_spectrum) == 0) call stats_spectra(vel_vfieldk_now)
+
+            ! Compute divergence
+            if (log_divergence .and. i_print_stats > 0 &
+                        .and. mod(itime, i_print_stats) == 0) call stats_worst_divergence(vel_vfieldk_now)
+
+            ! wall clock limit
+            call cpu_time(cput_now)
+            if (wall_clock_limit > 0 .and. cput_now - cput_start > wall_clock_limit) then
+                write(out, *) "Runtime limit reached, stopping."
+                kill_switch = .true.
+            end if
+
+            ! Broadcast the kill_switch status
+            call MPI_BCAST(kill_switch, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, mpi_err)
+
+            ! Flush manually if desired
+            if (i_flush > 0 .and. mod(itime, i_flush) == 0) then
+                call run_flush_channels
+            end if
+
+            if (kill_switch) then
+                call run_exit
+            end if
+
+            if (poincare) then
+                ! Store the current state for possibly computing
+                ! the U(t*) = Dissipation(t*) - Production(t*) = 0 intersection
+                ! With directional constraint d_t U(t=t*) > 0
+                
+                if ((i_print_stats > 0 .and. .not. (mod(itime, i_print_stats) == 0)) &
+                        .or. i_print_stats <= 0) then
+                    if (MHD) then
+                        call stats_compute(vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+                    else
+                        call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
+                    end if
+                end if
+            
+                U_poincare = dissip - powerin
+                call MPI_BCAST(U_poincare, 1, MPI_REAL8, 0, MPI_COMM_WORLD, mpi_err)
+                ! Save the field for possibly computing the Poincare
+                ! section intersection
+                vel_vfieldk_before = vel_vfieldk_now
+                vel_vfieldxx_before = vel_vfieldxx_now
+                fvel_vfieldk_before = fvel_vfieldk_now
+                dt_before = dt
+                time_before = time
+            end if
+
+            if (MHD) then
+                call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+            else
+                call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
+            end if
+
+            time = time + dt
+            itime = itime + 1
+
+            if (poincare) then
+                ! Check if there is a Poincare section intersection         
+                if (MHD) then
+                    call stats_compute(vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+                else
+                    call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
+                end if
+                U_poincare_next = dissip - powerin
+                call MPI_BCAST(U_poincare_next, 1, MPI_REAL8, 0, MPI_COMM_WORLD, mpi_err)
+                
+                ! If there is an intersection
+                if(U_poincare < 0 .and. U_poincare_next > 0) then
+            
+                    ! backup timestepped state
+                    vel_vfieldk_after = vel_vfieldk_now
+                    vel_vfieldxx_after = vel_vfieldxx_now
+                    fvel_vfieldk_after = fvel_vfieldk_now
+                    dt_after = dt
+                    time_after = time
+                    itime_after = itime
+                    
+                    write(file_ext, "(i6.6)") i_poincare
+                    fname = 'poincare.'//file_ext
+                    itime = i_poincare
+                    if (abs(U_poincare) < eps_poincare) then 
+                        ! previous state satisfies Poincare section condition
+                        time = time_before
+                        dt = dt_before
+                        call fieldio_write(vel_vfieldk_before)
+                    else if (abs(U_poincare_next) < eps_poincare) then
+                        ! current state satisfies Poincare section condition
+                        call fieldio_write(vel_vfieldk_now)
+                    else
+                        ! intersecting state is inbetween
+            
+                        ! restore to the state before the section
+                        vel_vfieldk_now = vel_vfieldk_before
+                        vel_vfieldxx_now = vel_vfieldxx_before
+                        dt = dt_before
                         
-                        if (abs(U_poincare_next) < eps_poincare) then
-                            ! we landed close to the section, we're done
-                            call fieldio_write(vel_vfieldk_now)
-                            exit
-                        else if (U_poincare_next < 0 .and. U_poincare_next > U_poincare) then
-                            ! we haven't crossed the section, but we're closer to it
-                            ! restart the search
+                        ! starting the secant loop
+                        dt_last = dt
+                        i_secant = 0
+                        do
+                            ! guess the time-step
+                            ! sanity check
 
-                            write(out, *) "Poincare: Restarting the secant method. it = ", itime_after
-                            call run_flush_channels
-                            
-                            do while (U_poincare_next < 0 .and. U_poincare_next > U_poincare)
-                                vel_vfieldk_before = vel_vfieldk_now
-                                vel_vfieldxx_before = vel_vfieldxx_now
-                                fvel_vfieldk_before = fvel_vfieldk_now
-                                dt_before = dt
-                                time_before = time
-                                U_poincare = U_poincare_next
-                                dt_last = dt
-                                i_secant = 0
+                            dt = dt_last / (1 - U_poincare_next / U_poincare)
+                            if (dt < 0) then
+                                write(out, *) "Poincare: Secant method failed. dt = ", dt, "it = ", itime_after
+                                call run_flush_channels
+                                call run_exit
+                            end if
 
-                                if (MHD) then
-                                    call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
-                                else
-                                    call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
-                                end if
-                                time = time_before + dt
+                            if (MHD) then
+                                call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+                            else
+                                call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
+                            end if
+                            time = time_before + dt
+                            if (MHD) then
+                                call stats_compute(vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+                            else
                                 call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
-                                U_poincare_next = dissip - powerin
-                                call MPI_BCAST(U_poincare_next, 1, MPI_REAL8, 0, MPI_COMM_WORLD, mpi_err)
-                            end do
+                            end if
+                            U_poincare_next = dissip - powerin
+                            call MPI_BCAST(U_poincare_next, 1, MPI_REAL8, 0, MPI_COMM_WORLD, mpi_err)
+                            
+                            if (abs(U_poincare_next) < eps_poincare) then
+                                ! we landed close to the section, we're done
+                                call fieldio_write(vel_vfieldk_now)
+                                exit
+                            else if (U_poincare_next < 0 .and. U_poincare_next > U_poincare) then
+                                ! we haven't crossed the section, but we're closer to it
+                                ! restart the search
 
-                            ! if this do while loop quits because U_poincare_next < U_poincare
-                            ! the dt < 0 check will get triggered
+                                write(out, *) "Poincare: Restarting the secant method. it = ", itime_after
+                                call run_flush_channels
+                                
+                                do while (U_poincare_next < 0 .and. U_poincare_next > U_poincare)
+                                    vel_vfieldk_before = vel_vfieldk_now
+                                    vel_vfieldxx_before = vel_vfieldxx_now
+                                    fvel_vfieldk_before = fvel_vfieldk_now
+                                    dt_before = dt
+                                    time_before = time
+                                    U_poincare = U_poincare_next
+                                    dt_last = dt
+                                    i_secant = 0
 
-                        else
-                            ! we either crossed the section and we're too far from it,
-                            ! or somehow we're still before the section and even
-                            ! further from before
+                                    if (MHD) then
+                                        call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
+                                    else
+                                        call timestep_precorr(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
+                                    end if
+                                    time = time_before + dt
+                                    call stats_compute(vel_vfieldk_now, fvel_vfieldk_now)
+                                    U_poincare_next = dissip - powerin
+                                    call MPI_BCAST(U_poincare_next, 1, MPI_REAL8, 0, MPI_COMM_WORLD, mpi_err)
+                                end do
 
-                            ! restore to the last iteration with updated
-                            ! time step
-                            vel_vfieldk_now = vel_vfieldk_before
-                            vel_vfieldxx_now = vel_vfieldxx_before
-                            fvel_vfieldk_now = fvel_vfieldk_before
-                            time = time_before
-                            ! update dt guess
-                            dt_last = dt
-                            i_secant = i_secant + 1
+                                ! if this do while loop quits because U_poincare_next < U_poincare
+                                ! the dt < 0 check will get triggered
 
-                            write(out, *) "Poincare: Next secant iteration = ", i_secant - 1, "dt = ", dt, "it = ", itime_after
-                            call run_flush_channels
-                        end if
-                        
-                    end do
-        
-                ! restore the timestepped state
-                vel_vfieldk_now = vel_vfieldk_after
-                vel_vfieldxx_now = vel_vfieldxx_after
-                fvel_vfieldk_now = fvel_vfieldk_after
-                dt = dt_after
-                time = time_after
-                itime = itime_after
-        
+                            else
+                                ! we either crossed the section and we're too far from it,
+                                ! or somehow we're still before the section and even
+                                ! further from before
+
+                                ! restore to the last iteration with updated
+                                ! time step
+                                vel_vfieldk_now = vel_vfieldk_before
+                                vel_vfieldxx_now = vel_vfieldxx_before
+                                fvel_vfieldk_now = fvel_vfieldk_before
+                                time = time_before
+                                ! update dt guess
+                                dt_last = dt
+                                i_secant = i_secant + 1
+
+                                write(out, *) "Poincare: Next secant iteration = ", i_secant - 1, "dt = ", dt, "it = ", itime_after
+                                call run_flush_channels
+                            end if
+                            
+                        end do
+            
+                    ! restore the timestepped state
+                    vel_vfieldk_now = vel_vfieldk_after
+                    vel_vfieldxx_now = vel_vfieldxx_after
+                    fvel_vfieldk_now = fvel_vfieldk_after
+                    dt = dt_after
+                    time = time_after
+                    itime = itime_after
+            
+                    end if
+                    
+                    i_poincare = i_poincare + 1
+            
                 end if
                 
-                i_poincare = i_poincare + 1
-        
             end if
-            
-        end if
 
-        if (compute_lyap) call lyap_step(vel_vfieldk_now)
+            if (compute_lyap) call lyap_step(vel_vfieldk_now)
 
-    end do
+        end do
+
+    endif
 
     ! Compute the averages
     if (integrate_invariant) call solver_averaging_finalize

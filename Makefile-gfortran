@@ -1,14 +1,21 @@
 # Assumes fftw3, lapack and BLAS are installed to HOMELOCAL, 
 # if not already within the paths the compiler looks for
 MPIF90 = mpifort
+COMPILER_ = gcc
 # -Warray-temporaries
-FCFLAGS = -g -fbacktrace -fcheck=all -ffpe-trap=invalid,zero,overflow -Wall -Wextra \
-		  -Wno-missing-include-dirs -fimplicit-none -fexternal-blas \
-		  -ffree-line-length-none -x f95-cpp-input -flto -c -Og -m64 \
-		  -I${HOMELOCAL}/include -I/usr/include 
-LDFLAGS = -L${HOMELOCAL}/lib -L/usr/local \
-		  -lfftw3 -lblas -llapack\
+# FCFLAGS = -ffpe-trap=invalid,zero,overflow -Wall -Wextra \
+# 		  -Wno-missing-include-dirs -fimplicit-none -fexternal-blas \
+# 		  -ffree-line-length-none -x f95-cpp-input -flto -c -O3 -m64 \
+# 		  -I${HOMELOCAL}/include -I/usr/include 
+# LDFLAGS = -L${HOMELOCAL}/lib -L/usr/local \
+# 		  -lfftw3 -lblas -llapack\
+
+# with MKL
+FCFLAGS = -ffpe-trap=invalid,zero,overflow -Wall -Wextra -Wno-missing-include-dirs -fimplicit-none -fexternal-blas -ffree-line-length-none -x f95-cpp-input -flto -c -O3 -I${USRLOCAL}/include -m64  -I"${MKLROOT}/include"
+LDFLAGS = -L${USRLOCAL}/lib -lfftw3 -m64  -L${MKLROOT}/lib -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
 		  
+# for debugs add
+# -g -fbacktrace -fcheck=all
 
 # Modules
 MODULES = numbers.o\
@@ -39,6 +46,7 @@ UTILS 	= utilities/newton.o\
 
 all:  $(MODULES) main.o 
 	  $(MPIF90) $(MODULES) main.o  -o dns.x $(LDFLAGS)
+	  $(COMPILER_) -shared -o libfakeintel.so fakeintel.c
 
 # -------------------------------------------------------
 

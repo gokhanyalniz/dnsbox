@@ -56,7 +56,7 @@ module parameters
                    i_flush = -1, &
                    i_project = -1, &
                    i_slice_project = -1, &
-                   i_save_midplane = -1
+                   i_save_phys = -1
 
     !# Time stepping 
     real(dp)    :: dt = 0.025_dp, &
@@ -77,6 +77,7 @@ module parameters
                                        ! relerr_lam of those of laminar
     real(sp) :: wall_clock_limit = -1.0_sp
     integer(i4) :: i_finish = -1 ! time step limit
+    integer(i4) :: i_benchmark = -1 ! number of benchmark iterations
     
     !# Diagnostics
     logical :: log_divergence  = .false.
@@ -122,11 +123,11 @@ module parameters
                           t_start, i_start, i_poincare_start
     namelist /output/ i_print_stats, i_print_steps, i_print_phases, i_save_fields, &
                       i_print_spectrum, i_flush, i_project, i_slice_project, &
-                      i_save_sliced_fields
+                      i_save_sliced_fields, i_save_phys
     namelist /time_stepping/ dt, implicitness, steptol, ncorr, adaptive_dt, &
                              dtmax, courant_target, integrate_invariant, &
                              poincare, eps_poincare
-    namelist /termination/ terminate_laminar, relerr_lam, wall_clock_limit, i_finish
+    namelist /termination/ terminate_laminar, relerr_lam, wall_clock_limit, i_finish, i_benchmark
     namelist /debugging/ log_divergence, divergence_th, shapiro_qalpha, shapiro_qbeta, shapiro_qgamma
     namelist /symmetries/ Rxy, Ry, Rz, Sx, Sy, slice
     namelist /lyapunov/ compute_lyap, lyap_normalize, i_lyap, eps_lyap, trans_lyap, k_cutoff
@@ -247,7 +248,7 @@ module parameters
             error stop
         end if
 
-        if (i_save_midplane .and. nz_perproc <= 1) then
+        if (i_save_phys .and. nz_perproc <= 1) then
             write(out, *) '*** num_procs too large:', num_procs, & 
                           '*** nz_perproc:', nz_perproc
             flush(out)
@@ -370,6 +371,7 @@ module parameters
         write(out, *) 'i_flush = ', i_flush
         write(out, *) 'i_project = ', i_project
         write(out, *) 'i_slice_project = ', i_slice_project
+        write(out, *) 'i_save_phys = ', i_save_phys
 
         if (i_slice_project > 0 .and. .not. Ry) then
             write(out, *) &
@@ -398,6 +400,7 @@ module parameters
         write(out, *) 'relerr_lam = ', relerr_lam
         write(out, *) 'wall_clock_limit = ', wall_clock_limit
         write(out, *) 'i_finish = ', i_finish
+        write(out, *) 'i_benchmark = ', i_benchmark
 
         write(out, '(79(''=''))')
         

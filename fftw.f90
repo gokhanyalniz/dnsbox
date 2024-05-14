@@ -81,7 +81,7 @@ module fftw
         ! fftw_sfieldkx_tmp2 has its own memory
         call c_f_pointer(p_fftw_sfieldkx_tmp2, fftw_sfieldkx_tmp2, [ny_half, nzz_perproc, nxx])
 
-        if (i_save_midplane > 0) then
+        if (i_save_phys > 0) then
             p_fftw_sfieldx = fftw_alloc_complex(& 
             int(ny_half_pad1  * nz_perproc * nx, i8))
             ! fftw_sfieldx and fftw_sfieldkx_0 share memory
@@ -107,7 +107,7 @@ module fftw
         fftw_sfieldkx_tmp1 = 0
         fftw_sfieldkx_tmp2 = 0
         
-        if (i_save_midplane > 0) then
+        if (i_save_phys > 0) then
             fftw_sfieldx = 0
             fftw_sfieldkx_tmp1_0 = 0
             fftw_sfieldkx_tmp2_0 = 0
@@ -165,7 +165,7 @@ module fftw
             fftw_sfieldxx, [2 * nyy_half_pad1 ], 1, 2 * nyy_half_pad1 , &
             FFTW_ESTIMATE)
 
-        if (i_save_midplane > 0) then
+        if (i_save_phys > 0) then
             p_plan_z_backward_0 = fftw_plan_many_dft(&
                 1, [nz_0], ny_half * nx_perproc, &
                 fftw_sfieldkx_tmp1_0(:, :, :), [nz], ny_half * nx_perproc, 1, &
@@ -602,7 +602,7 @@ module fftw
         complex(dpc), intent(in) :: sfieldk(:, :, :)
         real(dp), intent(out) :: sfieldx(:, :, :)
         _indices
-        _indicess
+        _indices0
         
         _loop_spec_begin
             fftw_sfieldk(ix, iy, iz) = sfieldk(ix, iy, iz)

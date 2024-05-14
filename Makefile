@@ -3,8 +3,8 @@
 # export MKLROOT=${HOME}/usr/intel/mkl
 MPIF90 = mpifort
 COMPILER_ = icx
-FCFLAGS = -diag-disable=10448 -c -O3 -fpp -heap-arrays -mcmodel=medium -fp-model consistent -fpconstant -I${USRLOCAL}/include -I${MKLROOT}/include/mkl/intel64/lp64 -I${MKLROOT}/include -qmkl=sequential
-LDFLAGS = -L${USRLOCAL}/lib -lfftw3 -L${MKLROOT}/lib/intel64/libmkl_blas95_lp64.a ${MKLROOT}/lib/intel64/libmkl_lapack95_lp64.a -L${MKLROOT}/lib/intel64/ -L${MKLROOT}/lib -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
+FCFLAGS = -diag-disable=10448 -c -O3 -fpp -heap-arrays -mcmodel=medium -fp-model consistent -fpconstant -I${USRLOCAL}/include -I"${MKLROOT}/include"
+LDFLAGS = -L${USRLOCAL}/lib -lfftw3 -L${MKLROOT}/lib -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
 
 # Modules
 MODULES = numbers.o\
