@@ -17,6 +17,7 @@ program main
     use symred
 
     integer :: i_benchmark_iter = 0
+    real(sp) :: bench_0, bench_t
     
     ! initialization:
     call run_init
@@ -36,12 +37,16 @@ program main
 
     if (i_benchmark > 0) then
 
+        call cpu_time(bench_0)
+
         do i_benchmark_iter = 1, i_benchmark
 
             call fftw_vk2x(vel_vfieldk_now, vel_vfieldxx_now)
             call fftw_vx2k(vel_vfieldxx_now, vel_vfieldk_now)
 
-            write(out, *) "Benchmark step done: ", i_benchmark_iter
+            call cpu_time(bench_t)
+
+            write(out, *) "Benchmark step done: ", i_benchmark_iter, "t = ", bench_t - bench_0
             flush(out)
         enddo
 
