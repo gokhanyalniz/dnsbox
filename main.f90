@@ -41,6 +41,7 @@ program main
             call fftw_vk2x(vel_vfieldk_now, vel_vfieldxx_now)
             call fftw_vx2k(vel_vfieldxx_now, vel_vfieldk_now)
 
+            write(out, *) "Benchmark step done: ", i_benchmark_iter
         enddo
 
         call run_exit
