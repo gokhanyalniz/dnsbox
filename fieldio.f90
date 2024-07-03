@@ -433,51 +433,53 @@ module fieldio
             ny_eff = ny
         endif
 
-        do iy0 = 1, ny_eff
-            write(file_ext_iy, "(i1.1)") iy0
-            fname_iy = TRIM(fname)//TRIM('_')//TRIM(file_ext_iy)
+        ! do iy0 = 1, ny_eff
+        ! hardcode for the midplane of waleffe
+        iy0 = 3
+        write(file_ext_iy, "(i1.1)") iy0
+        fname_iy = TRIM(fname)//TRIM('_')//TRIM(file_ext_iy)
 
-            ! opening the file
-            call MPI_INFO_CREATE(mpi_info_var, mpi_err)
-            ! call MPI_FILE_OPEN(MPI_COMM_WORLD, TRIM(fname_iy), &
-            !                 MPI_MODE_WRONLY + MPI_MODE_CREATE, &
-            !                 mpi_info_var, fh, mpi_err)
-            call MPI_FILE_OPEN(MPI_COMM_WORLD, fname_iy, &
-                            MPI_MODE_WRONLY + MPI_MODE_CREATE, &
-                            mpi_info_var, fh, mpi_err)
+        ! opening the file
+        call MPI_INFO_CREATE(mpi_info_var, mpi_err)
+        ! call MPI_FILE_OPEN(MPI_COMM_WORLD, TRIM(fname_iy), &
+        !                 MPI_MODE_WRONLY + MPI_MODE_CREATE, &
+        !                 mpi_info_var, fh, mpi_err)
+        call MPI_FILE_OPEN(MPI_COMM_WORLD, fname_iy, &
+                        MPI_MODE_WRONLY + MPI_MODE_CREATE, &
+                        mpi_info_var, fh, mpi_err)
 
-            ! the master node writes the header with parameters
-            if (my_id==0) then
-                call MPI_FILE_WRITE(fh,  forcing, 1, MPI_INTEGER4, mpi_status_var, mpi_err)
-                call MPI_FILE_WRITE(fh,  nx, 1, MPI_INTEGER4, mpi_status_var, mpi_err)
-                call MPI_FILE_WRITE(fh,  ny_eff, 1,MPI_INTEGER4,mpi_status_var,mpi_err)
-                call MPI_FILE_WRITE(fh,  nz_0, 1, MPI_INTEGER4, mpi_status_var, mpi_err)
-                call MPI_FILE_WRITE(fh,  Lx, 1,    MPI_REAL8, mpi_status_var, mpi_err)
-                call MPI_FILE_WRITE(fh,  Lz, 1,    MPI_REAL8, mpi_status_var, mpi_err)
-                call MPI_FILE_WRITE(fh,  Re, 1, MPI_REAL8, mpi_status_var, mpi_err)
-                call MPI_FILE_WRITE(fh,  tilt_angle, 1, MPI_REAL8, mpi_status_var, mpi_err)
-                call MPI_FILE_WRITE(fh,  dt, 1, MPI_REAL8, mpi_status_var, mpi_err)
-                call MPI_FILE_WRITE(fh,  itime, 1, MPI_INTEGER4, mpi_status_var, mpi_err)
-                call MPI_FILE_WRITE(fh,  time, 1,    MPI_REAL8, mpi_status_var, mpi_err)
-            end if
+        ! the master node writes the header with parameters
+        if (my_id==0) then
+            call MPI_FILE_WRITE(fh,  forcing, 1, MPI_INTEGER4, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  nx, 1, MPI_INTEGER4, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  ny_eff, 1,MPI_INTEGER4,mpi_status_var,mpi_err)
+            call MPI_FILE_WRITE(fh,  nz_0, 1, MPI_INTEGER4, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  Lx, 1,    MPI_REAL8, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  Lz, 1,    MPI_REAL8, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  Re, 1, MPI_REAL8, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  tilt_angle, 1, MPI_REAL8, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  dt, 1, MPI_REAL8, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  itime, 1, MPI_INTEGER4, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  time, 1,    MPI_REAL8, mpi_status_var, mpi_err)
+        end if
 
-            do n = 1, 3
+        do n = 1, 3
 
-                do ix0 = 1, nx; do iz0 = 1, nz_perproc;
-                    buf_sfieldx(ix0, iz0) = vfieldx(iy0,iz0,ix0,n)
-                end do; end do;
-                
-                offset = 68 + (n-1)*nx*nz_0*8 + my_id*nz_perproc*nx*8
-                count = nz_perproc  * nx
-                call MPI_FILE_WRITE_AT_ALL(fh, offset, buf_sfieldx, count, MPI_REAL8, &
-                                    mpi_status_var, mpi_err)
+            do ix0 = 1, nx; do iz0 = 1, nz_perproc;
+                buf_sfieldx(ix0, iz0) = vfieldx(iy0,iz0,ix0,n)
+            end do; end do;
+            
+            offset = 68 + (n-1)*nx*nz_0*8 + my_id*nz_perproc*nx*8
+            count = nz_perproc  * nx
+            call MPI_FILE_WRITE_AT_ALL(fh, offset, buf_sfieldx, count, MPI_REAL8, &
+                                mpi_status_var, mpi_err)
 
-            end do
+        end do
 
-            call MPI_FILE_CLOSE(fh, mpi_err)
-            call MPI_INFO_FREE(mpi_info_var, mpi_err)
+        call MPI_FILE_CLOSE(fh, mpi_err)
+        call MPI_INFO_FREE(mpi_info_var, mpi_err)
 
-        enddo
+        ! enddo
 
         deallocate(buf_sfieldx)
         
