@@ -435,11 +435,14 @@ module fieldio
 
         do iy0 = 1, ny_eff
             write(file_ext_iy, "(i1.1)") iy0
-            fname_iy = fname//'_'//file_ext_iy
+            fname_iy = TRIM(fname)//TRIM('_')//TRIM(file_ext_iy)
 
             ! opening the file
             call MPI_INFO_CREATE(mpi_info_var, mpi_err)
-            call MPI_FILE_OPEN(MPI_COMM_WORLD, TRIM(fname_iy), &
+            ! call MPI_FILE_OPEN(MPI_COMM_WORLD, TRIM(fname_iy), &
+            !                 MPI_MODE_WRONLY + MPI_MODE_CREATE, &
+            !                 mpi_info_var, fh, mpi_err)
+            call MPI_FILE_OPEN(MPI_COMM_WORLD, fname_iy, &
                             MPI_MODE_WRONLY + MPI_MODE_CREATE, &
                             mpi_info_var, fh, mpi_err)
 
