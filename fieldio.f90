@@ -467,8 +467,8 @@ module fieldio
                     buf_sfieldx(ix0, iz0) = vfieldx(iy0,iz0,ix0,n)
                 end do; end do;
                 
-                offset = 68 + (n-1)*nx*ny*nz_0*8 + my_id*nz_perproc*ny*nx*8
-                count = nz_perproc * ny * nx
+                offset = 68 + (n-1)*nx*nz_0*8 + my_id*nz_perproc*nx*8
+                count = nz_perproc  * nx
                 call MPI_FILE_WRITE_AT_ALL(fh, offset, buf_sfieldx, count, MPI_REAL8, &
                                     mpi_status_var, mpi_err)
 
