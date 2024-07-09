@@ -81,37 +81,37 @@ module fftw
         ! fftw_sfieldkx_tmp2 has its own memory
         call c_f_pointer(p_fftw_sfieldkx_tmp2, fftw_sfieldkx_tmp2, [ny_half, nzz_perproc, nxx])
 
-        if (i_save_phys > 0) then
-            p_fftw_sfieldx = fftw_alloc_complex(& 
-            int(ny_half_pad1  * nz_perproc * nx, i8))
-            ! fftw_sfieldx and fftw_sfieldkx_0 share memory
-            call c_f_pointer(&
-                p_fftw_sfieldx, fftw_sfieldx, [2 * ny_half_pad1 , nz_perproc, nx])
-            call c_f_pointer(&
-                p_fftw_sfieldx, fftw_sfieldkx_0, [ny_half_pad1 , nz_perproc, nx])
+        ! if (i_save_phys > 0) then
+        !     p_fftw_sfieldx = fftw_alloc_complex(& 
+        !     int(ny_half_pad1  * nz_perproc * nx, i8))
+        !     ! fftw_sfieldx and fftw_sfieldkx_0 share memory
+        !     call c_f_pointer(&
+        !         p_fftw_sfieldx, fftw_sfieldx, [2 * ny_half_pad1 , nz_perproc, nx])
+        !     call c_f_pointer(&
+        !         p_fftw_sfieldx, fftw_sfieldkx_0, [ny_half_pad1 , nz_perproc, nx])
 
-            p_fftw_sfieldkx_tmp1_0 = fftw_alloc_complex(int(ny_half * nx_perproc * nz_0, i8))
-            ! fftw_sfieldkx_tmp1_0 and fftw_sfieldkx_tmp1_t_0 share memory
-            call c_f_pointer(p_fftw_sfieldkx_tmp1_0, fftw_sfieldkx_tmp1_0,   &
-                            [ny_half, nx_perproc,  nz_0])
-            call c_f_pointer(p_fftw_sfieldkx_tmp1_0, fftw_sfieldkx_tmp1_t_0, &
-                            [ny_half, nz_perproc, nx])
+        !     p_fftw_sfieldkx_tmp1_0 = fftw_alloc_complex(int(ny_half * nx_perproc * nz_0, i8))
+        !     ! fftw_sfieldkx_tmp1_0 and fftw_sfieldkx_tmp1_t_0 share memory
+        !     call c_f_pointer(p_fftw_sfieldkx_tmp1_0, fftw_sfieldkx_tmp1_0,   &
+        !                     [ny_half, nx_perproc,  nz_0])
+        !     call c_f_pointer(p_fftw_sfieldkx_tmp1_0, fftw_sfieldkx_tmp1_t_0, &
+        !                     [ny_half, nz_perproc, nx])
 
-            p_fftw_sfieldkx_tmp2_0 = fftw_alloc_complex(int(ny_half * nz_perproc * nx, i8))
-            ! fftw_sfieldkx_tmp2 has its own memory
-            call c_f_pointer(p_fftw_sfieldkx_tmp2_0, fftw_sfieldkx_tmp2_0, [ny_half, nz_perproc, nx])
-        endif
+        !     p_fftw_sfieldkx_tmp2_0 = fftw_alloc_complex(int(ny_half * nz_perproc * nx, i8))
+        !     ! fftw_sfieldkx_tmp2 has its own memory
+        !     call c_f_pointer(p_fftw_sfieldkx_tmp2_0, fftw_sfieldkx_tmp2_0, [ny_half, nz_perproc, nx])
+        ! endif
 
         fftw_sfieldk = 0
         fftw_sfieldxx = 0
         fftw_sfieldkx_tmp1 = 0
         fftw_sfieldkx_tmp2 = 0
         
-        if (i_save_phys > 0) then
-            fftw_sfieldx = 0
-            fftw_sfieldkx_tmp1_0 = 0
-            fftw_sfieldkx_tmp2_0 = 0
-        endif
+        ! if (i_save_phys > 0) then
+        !     fftw_sfieldx = 0
+        !     fftw_sfieldkx_tmp1_0 = 0
+        !     fftw_sfieldkx_tmp2_0 = 0
+        ! endif
         
     end subroutine fftw_allocate
 
@@ -165,25 +165,25 @@ module fftw
             fftw_sfieldxx, [2 * nyy_half_pad1 ], 1, 2 * nyy_half_pad1 , &
             FFTW_ESTIMATE)
 
-        if (i_save_phys > 0) then
-            p_plan_z_backward_0 = fftw_plan_many_dft(&
-                1, [nz_0], ny_half * nx_perproc, &
-                fftw_sfieldkx_tmp1_0(:, :, :), [nz], ny_half * nx_perproc, 1, &
-                fftw_sfieldkx_tmp1_0(:, :, :), [nz], ny_half * nx_perproc, 1, &
-                FFTW_BACKWARD, FFTW_ESTIMATE)
+        ! if (i_save_phys > 0) then
+        !     p_plan_z_backward_0 = fftw_plan_many_dft(&
+        !         1, [nz_0], ny_half * nx_perproc, &
+        !         fftw_sfieldkx_tmp1_0(:, :, :), [nz], ny_half * nx_perproc, 1, &
+        !         fftw_sfieldkx_tmp1_0(:, :, :), [nz], ny_half * nx_perproc, 1, &
+        !         FFTW_BACKWARD, FFTW_ESTIMATE)
 
-            p_plan_x_backward_0 = fftw_plan_many_dft(&
-                1, [nx], ny_half * nz_perproc, &
-                fftw_sfieldkx_tmp2_0(:, :, :), [nx], ny_half * nz_perproc, 1, &
-                fftw_sfieldkx_tmp2_0(:, :, :), [nx], ny_half * nz_perproc, 1, &
-                FFTW_BACKWARD, FFTW_ESTIMATE)
+        !     p_plan_x_backward_0 = fftw_plan_many_dft(&
+        !         1, [nx], ny_half * nz_perproc, &
+        !         fftw_sfieldkx_tmp2_0(:, :, :), [nx], ny_half * nz_perproc, 1, &
+        !         fftw_sfieldkx_tmp2_0(:, :, :), [nx], ny_half * nz_perproc, 1, &
+        !         FFTW_BACKWARD, FFTW_ESTIMATE)
 
-            p_plan_y_backward_0 = fftw_plan_many_dft_c2r(&
-                1, [ny], nz_perproc * nx, &
-                fftw_sfieldkx_0, [ny_half_pad1], 1, ny_half_pad1 , &
-                fftw_sfieldx, [2 * ny_half_pad1], 1, 2 * ny_half_pad1 , &
-                FFTW_ESTIMATE)
-        endif
+        !     p_plan_y_backward_0 = fftw_plan_many_dft_c2r(&
+        !         1, [ny], nz_perproc * nx, &
+        !         fftw_sfieldkx_0, [ny_half_pad1], 1, ny_half_pad1 , &
+        !         fftw_sfieldx, [2 * ny_half_pad1], 1, 2 * ny_half_pad1 , &
+        !         FFTW_ESTIMATE)
+        ! endif
 
         ! wavenumbers
 

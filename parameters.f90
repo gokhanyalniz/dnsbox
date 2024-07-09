@@ -271,7 +271,13 @@ module parameters
         
         ! ---------------------------------------------------------------------
 
-        write(out, *) 'Re = ', Re
+        if (Ry .and. forcing == 2) then
+            write(out, *) 'Waleffe flow: Assuming input Re is in Couette units with 0.625**2 scaling.'
+            write(out, *) 'Re_waleffe = ', Re
+            Re = Re * 0.625d0**2
+        else
+            write(out, *) 'Re = ', Re
+        endif
 
         if (abs(tilt_angle) > small) then
             write(out, *) 'tilt_angle = ', tilt_angle

@@ -86,8 +86,8 @@ program main
             if (i_save_phys > 0 .and. itime > i_start .and. mod(itime, i_save_phys) == 0) then
                 write(file_ext, "(i6.6)") itime/i_save_phys
                 fname = 'phys.'//file_ext
-                call fftw_vk2x_0(vel_vfieldk_now, vel_vfieldx_now)
-                call fieldio_write_phys(vel_vfieldx_now)
+                ! call fftw_vk2x_0(vel_vfieldk_now, vel_vfieldx_now)
+                call fieldio_write_phys(vel_vfieldxx_now)
                 call run_flush_channels
             end if
 

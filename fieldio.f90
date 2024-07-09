@@ -411,7 +411,7 @@ module fieldio
 
 !==============================================================================
 
-    subroutine fieldio_write_phys(vfieldx)
+    subroutine fieldio_write_phys_nonexpanded(vfieldx)
 
         real(dp), intent(in) :: vfieldx(:, :, :, :)
         _indices0
@@ -482,6 +482,73 @@ module fieldio
         ! enddo
 
         deallocate(buf_sfieldx)
+        
+    end subroutine fieldio_write_phys_nonexpanded
+
+!==============================================================================
+
+    subroutine fieldio_write_phys(vfieldxx)
+
+        real(dp), intent(in) :: vfieldxx(:, :, :, :)
+        _indicess
+        integer(i4) :: n, count
+        TYPE(MPI_File) :: fh
+        integer(MPI_OFFSET_KIND)  :: offset
+        real(dp), allocatable, dimension(:, :) :: &
+            buf_sfieldxx
+        character(255) :: fname_iy
+        character(1)   :: file_ext_iy ! VERY STRICT
+
+        allocate(buf_sfieldxx(nxx, nzz_perproc))
+
+        ! midplane of waleffe
+        iyy = 4
+        write(file_ext_iy, "(i1.1)") iyy
+        fname_iy = TRIM(fname)//TRIM('_')//TRIM(file_ext_iy)
+
+        ! opening the file
+        call MPI_INFO_CREATE(mpi_info_var, mpi_err)
+        ! call MPI_FILE_OPEN(MPI_COMM_WORLD, TRIM(fname_iy), &
+        !                 MPI_MODE_WRONLY + MPI_MODE_CREATE, &
+        !                 mpi_info_var, fh, mpi_err)
+        call MPI_FILE_OPEN(MPI_COMM_WORLD, fname_iy, &
+                        MPI_MODE_WRONLY + MPI_MODE_CREATE, &
+                        mpi_info_var, fh, mpi_err)
+
+        ! the master node writes the header with parameters
+        if (my_id==0) then
+            call MPI_FILE_WRITE(fh,  forcing, 1, MPI_INTEGER4, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  nxx, 1, MPI_INTEGER4, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  ny, 1,MPI_INTEGER4,mpi_status_var,mpi_err)
+            call MPI_FILE_WRITE(fh,  nzz, 1, MPI_INTEGER4, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  Lx, 1,    MPI_REAL8, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  Lz, 1,    MPI_REAL8, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  Re, 1, MPI_REAL8, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  tilt_angle, 1, MPI_REAL8, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  dt, 1, MPI_REAL8, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  itime, 1, MPI_INTEGER4, mpi_status_var, mpi_err)
+            call MPI_FILE_WRITE(fh,  time, 1,    MPI_REAL8, mpi_status_var, mpi_err)
+        end if
+
+        do n = 1, 3
+
+            do ixx = 1, nxx; do izz = 1, nzz_perproc;
+                buf_sfieldxx(ixx, izz) = vfieldxx(iyy,izz,ixx,n)
+            end do; end do;
+            
+            offset = 68 + (n-1)*nxx*nzz*8 + my_id*nzz_perproc*nxx*8
+            count = nzz_perproc  * nxx
+            call MPI_FILE_WRITE_AT_ALL(fh, offset, buf_sfieldxx, count, MPI_REAL8, &
+                                mpi_status_var, mpi_err)
+
+        end do
+
+        call MPI_FILE_CLOSE(fh, mpi_err)
+        call MPI_INFO_FREE(mpi_info_var, mpi_err)
+
+        ! enddo
+
+        deallocate(buf_sfieldxx)
         
     end subroutine fieldio_write_phys
 

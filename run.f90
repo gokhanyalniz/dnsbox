@@ -23,7 +23,7 @@ module run
         shapiro_vfieldk, & ! Shapiro solution
         current_vfieldk ! Electric current for MHD
 
-    real(dp), allocatable :: vel_vfieldxx_now(:, :, :, :), vel_vfieldx_now(:, :, :, :)
+    real(dp), allocatable :: vel_vfieldxx_now(:, :, :, :) !, vel_vfieldx_now(:, :, :, :)
 
     integer(i4) :: laminarized_ch, shapiro_ch
     logical     :: kill_switch = .false., shapiro_written = .false.
@@ -55,7 +55,7 @@ module run
         allocate(fvel_vfieldk_now(nx_perproc, ny_half, nz, 3))
         allocate(vel_vfieldxx_now(nyy, nzz_perproc, nxx, 3))
 
-        if (i_save_phys > 0) allocate(vel_vfieldx_now(ny, nz_perproc, nx, 3))
+        ! if (i_save_phys > 0) allocate(vel_vfieldx_now(ny, nz_perproc, nx, 3))
 
         if (MHD) then
             allocate(current_vfieldk(nx_perproc, ny_half, nz, 3))
