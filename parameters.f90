@@ -4,7 +4,7 @@ module parameters
     use io
 
     ! DO NOT EDIT ABOVE THIS LINE
-    character(7), parameter :: revision = "4d21ead"
+    character(7), parameter :: revision = "0d232d2"
 
     !# Geometry & discretization
     integer(i4) :: &
@@ -248,7 +248,7 @@ module parameters
             error stop
         end if
 
-        if (i_save_phys .and. nz_perproc <= 1) then
+        if (i_save_phys > 0 .and. nz_perproc <= 1) then
             write(out, *) '*** num_procs too large:', num_procs, & 
                           '*** nz_perproc:', nz_perproc
             flush(out)

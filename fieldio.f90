@@ -427,7 +427,7 @@ module fieldio
 
         ! ny, nz_perproc, nx, 3
 
-        if (forcing == 2 .and. Ry == .true.) then
+        if (forcing == 2 .and. Ry) then
             ny_eff =  ny / 2 + 1
         else
             ny_eff = ny
