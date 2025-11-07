@@ -180,6 +180,20 @@ module parameters
 
         ! ---------------------------------------------------------------------
 
+        if (Ry .and. forcing == 2) then
+            write(out, *) 'Waleffe flow: Assuming input Re is in Couette units with 0.625**2 scaling.'
+            write(out, *) 'Re_couette = ', Re
+            write(out, *) 'Lx_couette = ', Lx
+            write(out, *) 'Lz_couette = ', Lz
+            Re = Re * 0.625d0**2
+            Lx = Lx / 0.625d0
+            Lz = Lz / 0.625d0
+            write(out, *) 'Waleffe flow: Following numbers will be in simulation units.'
+        endif
+        write(out, *) 'Re = ', Re
+
+        ! ---------------------------------------------------------------------
+
         write(out, "('nx, ny, nz', 3i4)") nx, ny, nz
         write(out, *) 'Lx = ', Lx
         write(out, *) 'Ly = ', Ly
@@ -270,14 +284,6 @@ module parameters
         write(out, '(79(''=''))')
         
         ! ---------------------------------------------------------------------
-
-        if (Ry .and. forcing == 2) then
-            write(out, *) 'Waleffe flow: Assuming input Re is in Couette units with 0.625**2 scaling.'
-            write(out, *) 'Re_waleffe = ', Re
-            Re = Re * 0.625d0**2
-        else
-            write(out, *) 'Re = ', Re
-        endif
 
         if (abs(tilt_angle) > small) then
             write(out, *) 'tilt_angle = ', tilt_angle
