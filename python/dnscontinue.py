@@ -125,7 +125,7 @@ def dnscontinue(rundir, i_finish_plus=None, force0=False, noray=False, script=No
                         f.write(line)
     else:
         copy(stateout, rundir_out / "state.000000")
-        for f in rundir.glob("*.slurm"):
+        for f in rundir.glob("*.sh"):
             copy(f, rundir_out / f.name)
 
     if not script == None:
