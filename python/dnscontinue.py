@@ -63,9 +63,9 @@ def dnscontinue(rundir, i_finish_plus=None, force0=False, noray=False, script=No
             exit("state0 not found.")
         i_final_state = 0
         stateout = states[0]
-    elif len(states) > 2:
-        i_final_state = int(states[-2].name[-6:])
-        stateout = states[-2]
+    # elif len(states) > 2:
+    #     i_final_state = int(states[-2].name[-6:])
+    #     stateout = states[-2]
     else:
         i_final_state = int(states[-1].name[-6:])
         stateout = states[-1]
@@ -124,7 +124,7 @@ def dnscontinue(rundir, i_finish_plus=None, force0=False, noray=False, script=No
                     except:
                         f.write(line)
     else:
-        copy(stateout, rundir_out / "state.000000")
+        copy(stateout, rundir_out / stateout.name)
         for f in rundir.glob("*.sh"):
             copy(f, rundir_out / f.name)
 
