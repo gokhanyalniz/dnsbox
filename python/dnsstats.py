@@ -167,16 +167,16 @@ def dnsstats(
     ny = nml["grid"]["ny"]
     nz = nml["grid"]["nz"]
 
-    if Ha > 0 or sigma_R > 0:
-        if abs(tilt_angle) > 0:
-            title = f"$\\mathrm{{Ha}}={Ha:.1f}$, $\\mathrm{{Re}}={Re:.1f}$, $\\sigma_R={sigma_R:.2f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $\\theta={tilt_angle:.1f}$, $N=({nx},{ny},{nz})$"
-        else:
-            title = f"$\\mathrm{{Ha}}={Ha:.1f}$, $\\mathrm{{Re}}={Re:.1f}$, $\\sigma_R={sigma_R:.2f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $N=({nx},{ny},{nz})$"
+    # if Ha > 0 or sigma_R > 0:
+    #     if abs(tilt_angle) > 0:
+    #         title = f"$\\mathrm{{Ha}}={Ha:.1f}$, $\\mathrm{{Re}}={Re:.1f}$, $\\sigma_R={sigma_R:.2f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $\\theta={tilt_angle:.1f}$, $N=({nx},{ny},{nz})$"
+    #     else:
+    #         title = f"$\\mathrm{{Ha}}={Ha:.1f}$, $\\mathrm{{Re}}={Re:.1f}$, $\\sigma_R={sigma_R:.2f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $N=({nx},{ny},{nz})$"
+    # else:
+    if abs(tilt_angle) > 0:
+        title = f"$\\mathrm{{Re}}={Re:.1f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $\\theta={tilt_angle:.1f}$, $N=({nx},{ny},{nz})$"
     else:
-        if abs(tilt_angle) > 0:
-            title = f"$\\mathrm{{Re}}={Re:.1f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $\\theta={tilt_angle:.1f}$, $N=({nx},{ny},{nz})$"
-        else:
-            title = f"$\\mathrm{{Re}}={Re:.1f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $N=({nx},{ny},{nz})$"
+        title = f"$\\mathrm{{Re}}={Re:.1f}$, $L=({Lx:.1f},{dns.Ly:.1f},{Lz:.1f})$, $N=({nx},{ny},{nz})$"
 
     if not tfilter or retfilter or cutinitial is not None or cutfinal is not None:
         tmins = [np.amin(stats[:,1])]
@@ -278,8 +278,8 @@ def dnsstats(
         # Perturbation kinetic energy
         figKin, axKin = plt.subplots()
         axKin.set_xlabel(timeLabel)
-        axKin.set_ylabel("$E'$")
-        axKin.plot(stats[:, 1], ekin_perturb)
+        axKin.set_ylabel("$E' / E_L$")
+        axKin.plot(stats[:, 1], ekin_perturb / Elam)
         axKin.set_title(title)
         figKin.savefig(figuresDir / "ekin_perturb.png")
 
@@ -344,9 +344,9 @@ def dnsstats(
     if frac:
         figf, axf = plt.subplots()
         axf.set_xlabel(timeLabel)
-        axf.set_ylabel("$v^2$")
+        axf.set_ylabel("$v^2 / E_L$")
         if frac0:
-            axf.plot(fracs[:, 1], fracs[:, 2], label="code")
+            axf.plot(fracs[:, 1], fracs[:, 2] / Elam, label="code")
 
         else:
 
@@ -359,13 +359,13 @@ def dnsstats(
                 f_mhd = 2 * (KineticEnergy - mhds[:, 3] / (2*Ha**2/Re))
                 if Ry:
                     f_mhd *= ny / (ny - 2)
-                axf.plot(stats[:, 1], f_mhd, label="mhd")
+                axf.plot(stats[:, 1], f_mhd / Elam, label="mhd")
 
             elif ray:
                 f_ray = 2 * (KineticEnergy - rays[:, 3] / (2*sigma_R))
                 if Ry:
                     f_ray *= ny / (ny - 2)
-                axf.plot(stats[:, 1], f_ray, label="ray")
+                axf.plot(stats[:, 1], f_ray / Elam, label="ray")
 
             if mhd or ray:
                 axf.legend()
