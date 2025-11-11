@@ -18,6 +18,7 @@ import dns
 def main():
     parser = argparse.ArgumentParser(description="Produce plots of time series.")
     parser.add_argument("runDir", type=str, help="path to the run folder.")
+    parser.add_argument("figuresDir", type=str, help="path to the folder to save figures to.")
     parser.add_argument(
         "Ni",
         type=int if "--tfilter" not in argv else float,
@@ -76,13 +77,14 @@ def main():
 
 
 def dnsstats(
-    runDir, Ni, Nf, tfilter=False, noshow=False, tex=False, diet=False, old=False, onlynew=False, cutinitial=None, cutfinal=None,
+    runDir, figuresDir, Ni, Nf, tfilter=False, noshow=False, tex=False, diet=False, old=False, onlynew=False, cutinitial=None, cutfinal=None,
 ):
 
     dns.setPlotDefaults(tex=tex)
 
     runDir = Path(runDir)
-    figuresDir = dns.createFiguresDir(runDir)
+    figuresDir = Path(figuresDir)
+    # figuresDir = dns.createFiguresDir(runDir)
 
     statsfile = "stat.gp"
     stepsfile = "steps.gp"
