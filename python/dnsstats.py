@@ -83,8 +83,7 @@ def dnsstats(
     dns.setPlotDefaults(tex=tex)
 
     runDir = Path(runDir)
-    figuresDir = Path(figuresDir)
-    # figuresDir = dns.createFiguresDir(runDir)
+    figuresDir = dns.createFiguresDir(figuresDir)
 
     statsfile = "stat.gp"
     stepsfile = "steps.gp"
