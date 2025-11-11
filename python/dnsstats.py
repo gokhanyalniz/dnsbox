@@ -299,12 +299,12 @@ def dnsstats(
         input_forcing = Production - rays[:, 2]
         axin.plot(stats[:, 1], input_forcing / Edotlam, label="Body")
 
-    if mhd:
-        axin.plot(mhds[:, 1], mhds[:, 2] / Edotlam, label="MHD")
-    if ray:
-        axin.plot(rays[:, 1], rays[:, 2] / Edotlam, label="Rayleigh")
-    if mhd or ray:
-        axin.legend()
+    # if mhd:
+    #     axin.plot(mhds[:, 1], mhds[:, 2] / Edotlam, label="MHD")
+    # if ray:
+    #     axin.plot(rays[:, 1], rays[:, 2] / Edotlam, label="Rayleigh")
+    # if mhd or ray:
+    #     axin.legend()
     axin.set_title(title)
     figin.savefig(figuresDir / "input.png")
 
@@ -324,12 +324,12 @@ def dnsstats(
         dissip_forcing = Dissipation - rays[:, 3]
         axdis.plot(stats[:, 1], dissip_forcing / Edotlam, label="Viscous")
 
-    if mhd:
-        axdis.plot(mhds[:, 1], mhds[:, 3] / Edotlam, label="MHD")
-    if ray:
-        axdis.plot(rays[:, 1], rays[:, 3] / Edotlam, label="Rayleigh")
-    if mhd or ray:
-        axdis.legend()
+    # if mhd:
+    #     axdis.plot(mhds[:, 1], mhds[:, 3] / Edotlam, label="MHD")
+    # if ray:
+    #     axdis.plot(rays[:, 1], rays[:, 3] / Edotlam, label="Rayleigh")
+    # if mhd or ray:
+    #     axdis.legend()
     axdis.set_title(title)
     figdis.savefig(figuresDir / "dissip.png")
 
