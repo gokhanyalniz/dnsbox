@@ -70,7 +70,7 @@ test: $(MODULES) test.o
 	$(MPIF90) $(FCFLAGS) $<
 
 parameters.o: parameters.f90
-			  bash version.sh && $(MPIF90) $(FCFLAGS) $<
+			  $(MPIF90) $(FCFLAGS) $<
 
 %.o: %.f90
 	 $(MPIF90) $(FCFLAGS) $<

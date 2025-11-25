@@ -21,12 +21,11 @@ module timestep
 
 !==============================================================================
 
-    subroutine timestep_precorr(vel_vfieldxx, vel_vfieldk, fvel_vfieldk, cur_vfieldk)
+    subroutine timestep_precorr(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
         
         real(dp), intent(inout) :: vel_vfieldxx(:, :, :, :)
         complex(dpc), intent(inout) :: vel_vfieldk(:, :, :, :)
         complex(dpc), intent(out) :: fvel_vfieldk(:, :, :, :)
-        complex(dpc), optional, intent(inout) :: cur_vfieldk(:, :, :, :)
 
         real(dp)     :: timestep_prefieldxx(nyy, nzz_perproc, nxx, 3)
         complex(dpc), dimension(nx_perproc, ny_half, nz, 3) :: &
@@ -40,20 +39,10 @@ module timestep
         integer(i4) :: c
         real(dp)    :: invdt, norm, error
 
-        if (MHD) then
-            if (.not. allocated(timestep_current_prev)) allocate(timestep_current_prev(nx_perproc, ny_half, nz, 3))
-            if (.not. allocated(timestep_current_next)) allocate(timestep_current_next(nx_perproc, ny_half, nz, 3))
-        end if
-
         ! initial rhs
-        if (present(cur_vfieldk)) then
-            call rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk, cur_vfieldk)
-        else
-            call rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
-        end if
+        call rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
 
         timestep_nonlinterm_prev = fvel_vfieldk
-        if (MHD) timestep_current_prev = cur_vfieldk
 
         ! add the linear term to the rhs for others's use
         _loop_spec_begin
@@ -81,11 +70,7 @@ module timestep
             call vfield_norm(timestep_prefieldk, norm, .true.)
             
             call fftw_vk2x(timestep_prefieldk, timestep_prefieldxx)
-            if (MHD) then
-                call rhs_nonlin_term(timestep_prefieldxx, timestep_prefieldk, timestep_nonlinterm_next, timestep_current_next)
-            else
-                call rhs_nonlin_term(timestep_prefieldxx, timestep_prefieldk, timestep_nonlinterm_next)
-            end if
+            call rhs_nonlin_term(timestep_prefieldxx, timestep_prefieldk, timestep_nonlinterm_next)
 
             ! Now we have N(n+1)^c in state(:,:,:,1:3)
             _loop_spec_begin
@@ -102,7 +87,6 @@ module timestep
 
             ! update
             timestep_nonlinterm_prev(:,:,:,1:3) = timestep_nonlinterm_next(:,:,:,1:3)
-            if (MHD) timestep_current_prev = timestep_current_next
 
             if (error/norm < steptol) then
                 ! accept step
@@ -111,14 +95,10 @@ module timestep
                 ! apply pressure, galilean invariance and symmetry projections
                 call vfield_pressure(vel_vfieldk)
                 call vfield_galinv(vel_vfieldk)
-                call symmopps_project_all(vel_vfieldk,vel_vfieldk)
                 call vfield_solvediv(vel_vfieldk)      
     
                 ! update the physical space version
                 call fftw_vk2x(vel_vfieldk, vel_vfieldxx)
-                
-                ! update the MHD current
-                if (MHD) call rhs_current(vel_vfieldk, cur_vfieldk)
 
                 ! log the step
                 ncorr_last = c

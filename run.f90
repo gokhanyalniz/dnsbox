@@ -18,29 +18,14 @@ module run
     real(sp) :: cput_now, cput_start, cput_stop
 
     complex(dpc), allocatable, dimension(:, :, :, :) :: &
-        vel_vfieldk_now, fvel_vfieldk_now, & ! u and F(u) now
-        sliced_vel_vfieldk_now, & ! symmetry reduced u
-        shapiro_vfieldk, & ! Shapiro solution
-        current_vfieldk ! Electric current for MHD
+        vel_vfieldk_now, fvel_vfieldk_now! u and F(u) now
 
     real(dp), allocatable :: vel_vfieldxx_now(:, :, :, :) !, vel_vfieldx_now(:, :, :, :)
 
-    integer(i4) :: laminarized_ch, shapiro_ch
-    logical     :: kill_switch = .false., shapiro_written = .false.
+    integer(i4) :: laminarized_ch
+    logical     :: kill_switch = .false.
 
-    real(dp) :: e_diff, input_diff, diss_diff, shapiro_norm, shapiro_normdelta
-    character(255) :: shapiro_file = 'shapiro.gp'
-
-    ! poincare variables
-    real(dp) :: U_poincare, U_poincare_next, dt_before, dt_after, dt_last, &
-                time_before, time_after
-    integer(i4) :: i_poincare, itime_after, i_secant
-    complex(dpc), allocatable, dimension(:, :, :, :) :: &
-        vel_vfieldk_before, fvel_vfieldk_before, &
-        vel_vfieldk_after, fvel_vfieldk_after
-
-    real(dp), allocatable, dimension(:, :, :, :) :: vel_vfieldxx_before, &
-                                                    vel_vfieldxx_after
+    real(dp) :: e_diff, input_diff, diss_diff
     contains
     
     subroutine run_init
@@ -57,59 +42,17 @@ module run
 
         ! if (i_save_phys > 0) allocate(vel_vfieldx_now(ny, nz_perproc, nx, 3))
 
-        if (MHD) then
-            allocate(current_vfieldk(nx_perproc, ny_half, nz, 3))
-        end if
- 
-        if (poincare) then
-            allocate(vel_vfieldk_before(nx_perproc, ny_half, nz, 3))
-            allocate(fvel_vfieldk_before(nx_perproc, ny_half, nz, 3))
-            allocate(vel_vfieldxx_before(nyy, nzz_perproc, nxx, 3))
-            allocate(vel_vfieldk_after(nx_perproc, ny_half, nz, 3))
-            allocate(fvel_vfieldk_after(nx_perproc, ny_half, nz, 3))
-            allocate(vel_vfieldxx_after(nyy, nzz_perproc, nxx, 3))
-            i_poincare = i_poincare_start
-        end if
-
         ! Initial time
         itime = i_start
         time  = t_start
 
-        if (IC == -3) then
-            call vfield_shapiro(time, vel_vfieldk_now)
-        elseif (IC == -2) then
-            call vfield_laminar(vel_vfieldk_now)
-        elseif (IC == -1) then
-            ! Random initial condition
-            
-            call vfield_random(vel_vfieldk_now, .true.)
-
-            write(out, *) "run: Generated a random velocity field."
-            write(out, *) "run: Seed for random velocities = ", seed
-
-            write(file_ext, "(i6.6)") 0
-            fname = 'state.'//file_ext
-            call fieldio_write(vel_vfieldk_now)
-        else
-            write(file_ext, "(i6.6)") IC
-            fname = 'state.'//file_ext
-            call fieldio_read(vel_vfieldk_now)
-        end if
-
-        if (IC < -1) then
-            call vfield_pressure(vel_vfieldk_now)
-            call vfield_galinv(vel_vfieldk_now)
-            call symmopps_project_all(vel_vfieldk_now,vel_vfieldk_now)
-            call vfield_solvediv(vel_vfieldk_now)    
-        end if
+        write(file_ext, "(i6.6)") IC
+        fname = 'state.'//file_ext
+        call fieldio_read(vel_vfieldk_now)
 
         call fftw_vk2x(vel_vfieldk_now, vel_vfieldxx_now)
 
-        if (MHD) then
-            call rhs_all(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now, current_vfieldk)
-        else
-            call rhs_all(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
-        end if
+        call rhs_all(vel_vfieldxx_now, vel_vfieldk_now, fvel_vfieldk_now)
 
         call cpu_time(cput_start)
 
@@ -152,23 +95,8 @@ module run
         flush(out)
         if (my_id == 0) then
             if (stats_stat_written) flush(stats_stat_ch)
-            if (stats_ray_written) flush(stats_ray_ch)
-            if (stats_mhd_written) flush(stats_mhd_ch)
             if (stats_frac_written) flush(stats_frac_ch)
             if (steps_written) flush(steps_ch)
-            if (stats_specs_written) then
-                flush(stats_specx_ch)
-                flush(stats_specy_ch)
-                flush(stats_specz_ch)
-            end if
-            if (phases_written) flush(phases_ch)
-            if (proj_written) flush(proj_ch)
-            if (shapiro_written) flush(shapiro_ch)
-            if (lyap_written) flush(lyap_out)
-            if (slice_proj_written) then
-                flush(slice_proj_ch_x)
-                flush(slice_proj_ch_z)
-            end if
         end if
     end subroutine run_flush_channels
 
@@ -176,23 +104,8 @@ module run
 
     subroutine run_close_channels
         if (stats_stat_written) close(stats_stat_ch)
-        if (stats_ray_written) close(stats_ray_ch)
-        if (stats_mhd_written) close(stats_mhd_ch)
         if (stats_frac_written) close(stats_frac_ch)
         if (steps_written) close(steps_ch)
-        if (stats_specs_written) then
-            close(stats_specx_ch)
-            close(stats_specy_ch)
-            close(stats_specz_ch)
-        end if
-        if (phases_written) close(phases_ch)
-        if (proj_written) close(proj_ch)
-        if (shapiro_written) close(shapiro_ch)
-        if (lyap_written) close(lyap_out)
-        if (slice_proj_written) then
-            close(slice_proj_ch_x)
-            close(slice_proj_ch_z)
-        end if
     end subroutine run_close_channels
 
 !==============================================================================

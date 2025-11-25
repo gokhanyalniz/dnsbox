@@ -9,19 +9,6 @@ Lz = 4.0 ! Length in z
 &physics
 forcing    = 1     ! 0: none, 1: sine, 2: cosine
 Re         = 630.0 ! Reynolds number
-tilt_angle = 0.0   ! (degrees)
-smag_const = 0.0   ! Smagorinsky constant (0: DNS, >0: LES)
-sigma_R    = 0.0   ! Rayleigh friction constant
-Ha         = 0.0   ! Hartmann number
-/
-
-&symmetries
-Rxy = F
-Ry  = F
-Rz  = F
-Sx  = F
-Sy  = F
-slice = F
 /
 
 &initiation
@@ -32,20 +19,15 @@ random_energy = 0.1 ! Random ICs have energy random_energy * eLaminar
 random_smooth = 0.9 ! Smoothness factor for random ICs
 t_start       = 0.0 ! Initial time
 i_start       = 0   ! Initial time step
-i_poincare_start = 0
 /
 
 &output 
 i_print_stats        = 50   ! How often to compute and write statistics
 i_print_steps        = 50   ! How often to write time stepper data
-i_print_phases       = -1   ! How often to write slice phases
 i_save_fields        = 500	! How often to save state files to disk
 i_save_phys          =      ! How often to save physical space files to disk
 i_save_sliced_fields = -1	! How often to save sliced state files to disk
-i_print_spectrum     = -1   ! How often to compute spectra
 i_flush   = -1              ! How often to force flush textual data
-i_project = -1              ! How often to project onto the projection basis
-i_slice_project = -1        ! How often to project onto slice template basis
 /
 
 &time_stepping
@@ -56,8 +38,6 @@ ncorr          = 10         ! Maximum number of corrector steps
 adaptive_dt    = T          ! T: Enable dynamic timestep sizes
 dtmax          = 0.1        ! Maximum size of time steps
 courant_target = 0.25       ! Courant number to target
-poincare       = F
-eps_poincare   = 1.0e-9
 /
 
 &termination
@@ -65,28 +45,4 @@ terminate_laminar = T     ! Terminate (T) or not (F) when laminarized
 relerr_lam = 0.1          ! relerr for deciding laminar
 wall_clock_limit = -1     ! if negative, unlimited (seconds)
 i_finish = -1             ! If positive, the run will stop after itime=i_finish
-i_benchmark = -1          ! How many benchmark steps to take
-/
-
-&spectra    ! spectral drop-off timeseries will compare:
-dnki = 1    ! mode dnki to
-dnkf = 0    ! mode nkmax + dnkf
-/
-
-&debugging
-log_divergence  = F  ! (T) Enable divergence logging
-/
-
-&lyapunov
-compute_lyap = F   ! T: compute the maximal Lyapunov exponent 
-lyap_normalize = T ! F: turn off normalizing Lyapunov vectors
-i_lyap = 1000      ! delta t_{lyapunov} = i_lyapunov * dt
-eps_lyap = 1.0e-6  ! perturbation amplitude
-trans_lyap = 300   ! start estimating the exponent after this time
-k_cutoff = 10      ! cutoff wave number for perturbations. Disabled if <0
-/
-
-&projection
-num_proj_bases = 10 ! project onto the bases (u.000001 ... u.{num_proj_bases})
-subtract_origin = F ! T: subtract the origin (u.000000) before projecting
 /

@@ -12,40 +12,19 @@ module rhs
 
 !==============================================================================
 
-    subroutine rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk, cur_vfieldk)
+    subroutine rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
 
         real(dp), intent(in)  :: vel_vfieldxx(:, :, :, :)
         complex(dpc), intent(in) :: vel_vfieldk(:, :, :, :)
         complex(dpc), intent(out) :: fvel_vfieldk(:, :, :, :)
-        complex(dpc), optional, intent(inout) :: cur_vfieldk(:, :, :, :)
 
         complex(dpc) :: rhs_vfieldk(nx_perproc, ny_half, nz, 6), advect(3), advect_, div
         real(dp) :: rhs_vfieldxx(nyy, nzz_perproc, nxx, 5), u_out_u(6), trace
 
         integer(i4) :: n, i, j
 
-        ! LES fields
-        real(dp), allocatable :: &
-            rhs_nu_T_fieldxx(:, :, :), &
-            rhs_rofs_tensorxx(:, :, :, :)
-        complex(dpc), allocatable :: &
-            rhs_model_vfieldk(:, :, :, :), &
-            rhs_div_model_vfieldk(:, :, :, :)
-
         _indices
         _indicess
-
-        if (LES) then
-            if (.not. allocated(rhs_nu_T_fieldxx)) &
-                allocate(rhs_nu_T_fieldxx(nyy, nzz_perproc, nxx))
-            if (.not. allocated(rhs_rofs_tensorxx)) &
-                allocate(rhs_rofs_tensorxx(nyy, nzz_perproc, nxx, 6))
-            if (.not. allocated(rhs_model_vfieldk)) &
-                allocate(rhs_model_vfieldk(nx_perproc, ny_half, nz, 3))
-            if (.not. allocated(rhs_div_model_vfieldk)) &
-                allocate(rhs_div_model_vfieldk(nx_perproc, ny_half, nz, 3))
-
-        end if
     
         ! get 6 velocity products:
         _loop_phys_begin
@@ -79,23 +58,7 @@ module rhs
             -(rhs_vfieldk(:,:,:,nsym(1,1)) + rhs_vfieldk(:,:,:,nsym(2,2)))
         
         ! Now rhs_vfieldk(:,:,:,:, 1:6) holds the products uu, uv, uw, ...
-        ! in Fourier space.
-
-        if (LES) then
-
-            call rhs_les(vel_vfieldk, rhs_nu_T_fieldxx, rhs_rofs_tensorxx)
-            
-            do j = 1, 3
-                do i = 1, 3
-                    rhs_vfieldxx(:, :, :, i) = &
-                            -2.0_dp * rhs_nu_T_fieldxx * rhs_rofs_tensorxx(:, :, :, nsym(i,j))
-                end do
-
-                call fftw_vx2k(rhs_vfieldxx, rhs_model_vfieldk)
-                call diffops_div(rhs_model_vfieldk, rhs_div_model_vfieldk(:, :, :, j))
-
-            end do
-        end if    
+        ! in Fourier space.  
 
         _loop_spec_begin                  
             ! Nonlinear term:
@@ -109,14 +72,9 @@ module rhs
                                 * rhs_vfieldk(ix, iy, iz, nsym(i,j))
                 end do
 
-                if(LES) advect(j) = advect(j) - rhs_div_model_vfieldk(ix, iy, iz, j)
-
             end do
 
             advect_ = 0
-            if(MHD) advect_ = advect_ + vfield_coordinatek(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * (Ha**2/Re)
-
-            if(rayleigh_friction) advect_ = advect_ + vfield_coordinatek(ix, iy, iz, 2) * vel_vfieldk(ix, iy, iz, 2) * sigma_R
 
             ! Pressure terms
             div = 0
@@ -135,98 +93,27 @@ module rhs
         
         ! Add forcing
         if (forcing /= 0 .and. ix_zero /= -1) then
-            if (tilting) then
-                if (forcing == 1) then ! sine
-                    fvel_vfieldk(ix_zero,iy_force,1,1) = fvel_vfieldk(ix_zero,iy_force,1,1) &
-                            - imag_1 * cos(tilt_angle * PI / 180.0_dp) * 0.5_dp * amp / (4.0_dp*Re)
-                    fvel_vfieldk(ix_zero,iy_force,1,3) = fvel_vfieldk(ix_zero,iy_force,1,3) &
-                            - imag_1 * sin(tilt_angle * PI / 180.0_dp) * 0.5_dp * amp / (4.0_dp*Re)
-                elseif (forcing == 2) then ! cosine
-                    fvel_vfieldk(ix_zero,iy_force,1,1) = fvel_vfieldk(ix_zero,iy_force,1,1) &
-                            + cos(tilt_angle * PI / 180.0_dp) * 0.5_dp * amp / (4.0_dp*Re)
-                    fvel_vfieldk(ix_zero,iy_force,1,3) = fvel_vfieldk(ix_zero,iy_force,1,3) &
-                            + sin(tilt_angle * PI / 180.0_dp) * 0.5_dp * amp / (4.0_dp*Re)
-                end if
-            else
-                if (forcing == 1) then ! sine
-                    fvel_vfieldk(ix_zero,iy_force,1,1) = fvel_vfieldk(ix_zero,iy_force,1,1) &
-                            - imag_1 * 0.5_dp * amp / (4.0_dp*Re)
-                elseif (forcing == 2) then ! cosine
-                    fvel_vfieldk(ix_zero,iy_force,1,1) = fvel_vfieldk(ix_zero,iy_force,1,1) &
-                            + 0.5_dp * amp / (4.0_dp*Re)
-                end if
-            end if            
-        end if
-
-        if (rayleigh_friction) then
-            fvel_vfieldk(:, :, :, 1) = fvel_vfieldk(:, :, :, 1) &
-                - sigma_R * (vel_vfieldk(:, :, :, 1) - laminar_vfieldk(:, :, :, 1)) 
-                
-            fvel_vfieldk(:, :, :, 3) = fvel_vfieldk(:, :, :, 3) &
-                - sigma_R * (vel_vfieldk(:, :, :, 3) - laminar_vfieldk(:, :, :, 3))             
-        end if
-
-        if (MHD) then
-
-            ! compute the current
-            call rhs_current(vel_vfieldk, cur_vfieldk)
-
-            ! Adding to the RHS the resulting forcing term
-            ! \vec{F}_B = \frac{Ha^2}{Re} (\current \times \hat{e}_B)
-
-            ! -\current_z \hat{x}
-            fvel_vfieldk(:, :, :, 1) = fvel_vfieldk(:, :, :, 1) - cur_vfieldk(:, :, :, 3) * (Ha**2 / Re)
-
-            ! \current_x \hat{z}
-            fvel_vfieldk(:, :, :, 3) = fvel_vfieldk(:, :, :, 3) + cur_vfieldk(:, :, :, 1) * (Ha**2 / Re)
-
+            if (forcing == 1) then ! sine
+                fvel_vfieldk(ix_zero,iy_force,1,1) = fvel_vfieldk(ix_zero,iy_force,1,1) &
+                        - imag_1 * 0.5_dp * amp / (4.0_dp*Re)
+            elseif (forcing == 2) then ! cosine
+                fvel_vfieldk(ix_zero,iy_force,1,1) = fvel_vfieldk(ix_zero,iy_force,1,1) &
+                        + 0.5_dp * amp / (4.0_dp*Re)
+            end if      
         end if
 
     end subroutine rhs_nonlin_term
 
 !==============================================================================
 
-    subroutine rhs_current(vel_vfieldk, cur_vfieldk)
-        complex(dpc), intent(in)  :: vel_vfieldk(:, :, :, :)
-        complex(dpc), intent(out) :: cur_vfieldk(:, :, :, :)
-
-        integer(i4) :: n
-
-        _indices
-
-        _loop_spec_begin
-
-        ! Solving the scalar potential part (- \nabla \phi) of the current, it's solved like pressure is solved above
-        do n = 1, 3
-            cur_vfieldk(ix,iy,iz,n) = -(vel_vfieldk(ix,iy,iz,1) * kz(iz) - vel_vfieldk(ix,iy,iz,3) * kx(ix)) * vfield_coordinatek(ix,iy,iz,n) * inverse_laplacian(ix,iy,iz)
-        end do
-
-        _loop_spec_end
-
-        ! Adding the Biot-Savart part (\vec{u} \times \hat{e}_B), *strictly wall-normal magnetic field*
-
-        ! -w \hat{x}
-        cur_vfieldk(:,:,:,1) = cur_vfieldk(:,:,:,1) - vel_vfieldk(:,:,:,3)
-        ! u \hat{z}
-        cur_vfieldk(:,:,:,3) = cur_vfieldk(:,:,:,3) + vel_vfieldk(:,:,:,1)
-
-    end subroutine rhs_current
-
-!==============================================================================
-
-    subroutine rhs_all(vel_vfieldxx, vel_vfieldk, fvel_vfieldk, cur_vfieldk)
+    subroutine rhs_all(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
         real(dp), intent(in)  :: vel_vfieldxx(:, :, :, :)
         complex(dpc), intent(in)  :: vel_vfieldk(:, :, :, :)
         complex(dpc), intent(out) :: fvel_vfieldk(:, :, :, :)
-        complex(dpc), optional, intent(inout) :: cur_vfieldk(:, :, :, :)
 
         _indices
 
-        if(present(cur_vfieldk)) then
-            call rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk, cur_vfieldk)
-        else
-            call rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
-        end if
+        call rhs_nonlin_term(vel_vfieldxx, vel_vfieldk, fvel_vfieldk)
 
         _loop_spec_begin
             fvel_vfieldk(ix,iy,iz,1:3) = fvel_vfieldk(ix,iy,iz,1:3) &
@@ -237,70 +124,5 @@ module rhs
     end subroutine rhs_all
 
 !==============================================================================
-
-    subroutine rhs_les(vel_vfieldk, nu_T_fieldxx, rofs_tensorxx)
-        ! compute eddy viscosity and rate of strain tensor required for LES
-        
-        complex(dpc), intent(in) :: vel_vfieldk(:, :, :, :)
-        real(dp), intent(out) :: nu_T_fieldxx(:, :, :) ! eddy viscosity
-        real(dp), intent(out) :: rofs_tensorxx(:, :, :, :) ! rate-of-strain tensor
-
-        complex(dpc) :: rofs_tensork(nx_perproc, ny, nz, 5) 
-        complex(dpc) :: rhs_temp_fieldk(nx_perproc, ny, nz)
-
-        integer(i4) :: n
-        real(dp) :: multiplier
-
-        ! diagonal elementes of the rate of strain tensor
-        call diffops_partx(vel_vfieldk(:, :, :, 1), rofs_tensork(:, :, :, nsym(1,1)))
-        call diffops_party(vel_vfieldk(:, :, :, 2), rofs_tensork(:, :, :, nsym(2,2)))
-        ! no need to compute (3, 3) (tracelessness)
-
-        ! off-diagonal elements
-
-        ! (1,2)
-        call diffops_partx(vel_vfieldk(:, :, :, 2), rofs_tensork(:, :, :, nsym(1,2)))
-        call diffops_party(vel_vfieldk(:, :, :, 1), rhs_temp_fieldk(:, :, :))
-        rofs_tensork(:, :, :, nsym(1,2)) = &
-                        (rofs_tensork(:, :, :, nsym(1,2)) + rhs_temp_fieldk) * 0.5_dp
-
-        ! (1,3)
-        call diffops_partx(vel_vfieldk(:, :, :, 3), rofs_tensork(:, :, :, nsym(1,3)))
-        call diffops_partz(vel_vfieldk(:, :, :, 1), rhs_temp_fieldk(:, :, :))
-        rofs_tensork(:, :, :, nsym(1,3)) = &
-            (rofs_tensork(:, :, :, nsym(1,3)) + rhs_temp_fieldk) * 0.5_dp
-
-        ! (2,3)
-        call diffops_party(vel_vfieldk(:, :, :, 3), rofs_tensork(:, :, :, nsym(2,3)))
-        call diffops_partz(vel_vfieldk(:, :, :, 2), rhs_temp_fieldk(:, :, :))
-        rofs_tensork(:, :, :, nsym(2,3)) = &
-            (rofs_tensork(:, :, :, nsym(2,3)) + rhs_temp_fieldk) * 0.5_dp
-
-        do n = 1, 5
-            call fftw_sk2x(rofs_tensork(:, :, :, n), rofs_tensorxx(:, :, :, n))
-        end do
-
-        ! get the (3 ,3) element from tracelessness
-        rofs_tensorxx(:, :, :, nsym(3,3)) = &
-                    -(rofs_tensorxx(:, :, :, nsym(1,1)) &
-                        + rofs_tensorxx(:, :, :, nsym(2,2)))
-        
-        nu_T_fieldxx = 0
-
-        do n = 1, 6
-            ! correct for non-diagonal entries
-            multiplier = 1.0_dp
-            if (isym(n) /= jsym(n)) multiplier = 2.0_dp
-
-            nu_T_fieldxx(:, :, :) = nu_T_fieldxx(:, :, :) &
-                                    + 2.0_dp * multiplier &
-                                        * rofs_tensorxx(:, :, :, n) ** 2
-
-        end do
-
-
-        nu_T_fieldxx = (smag_const * Delta_LES) ** 2 * sqrt(nu_T_fieldxx)
-
-    end subroutine rhs_les
 
 end module rhs
