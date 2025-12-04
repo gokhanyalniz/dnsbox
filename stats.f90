@@ -11,14 +11,12 @@ module stats
     use timestep
 
     real(dp) :: ekin, powerin, enstrophy, dissip, norm_rhs, &
-                v2_avg, power_unit, ekin_perturb
+                power_unit, ekin_perturb
 
-    integer(i4) :: stats_stat_ch, stats_frac_ch
-    logical :: stats_stat_written = .false., &
-               stats_frac_written = .false.
+    integer(i4) :: stats_stat_ch,
+    logical :: stats_stat_written = .false.
     
-    character(255) :: stats_stat_file = 'stat.gp', &
-                      stats_frac_file = 'stat_frac.gp'
+    character(255) :: stats_stat_file = 'stat.gp'
 
     contains 
 

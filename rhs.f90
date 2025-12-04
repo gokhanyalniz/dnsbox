@@ -18,58 +18,20 @@ module rhs
         complex(dpc), intent(in) :: vel_vfieldk(:, :, :, :)
         complex(dpc), intent(out) :: fvel_vfieldk(:, :, :, :)
 
-        complex(dpc) :: rhs_vfieldk(nx_perproc, ny_half, nz, 6), advect(3), advect_, div
-        real(dp) :: rhs_vfieldxx(nyy, nzz_perproc, nxx, 6), u_out_u(6), trace
-        ! 6 rather than 5 with Basdevant /g 251204
+        complex(dpc) :: rhs_vfieldk(nx_perproc, ny_half, nz, 6), advect(3), div
+        real(dp) :: rhs_vfieldxx(nyy, nzz_perproc, nxx, 6)
 
         integer(i4) :: n, i, j
 
         _indices
         _indicess
 
-        ! Disabling Basdevant complication /g 251204
-    
-        ! ! get 6 velocity products:
-        ! _loop_phys_begin
-
-        !     do n = 1, 6
-        !         u_out_u(n) = vel_vfieldxx(iyy,izz,ixx,isym(n)) &
-        !                         * vel_vfieldxx(iyy,izz,ixx,jsym(n))
-        !     end do
-
-        !     ! Basdevant 1983, subtract the trace
-        !     trace = u_out_u(nsym(1,1)) + u_out_u(nsym(2,2)) &
-        !                                         + u_out_u(nsym(3,3))
-        !     u_out_u(nsym(1,1)) = u_out_u(nsym(1,1)) - trace / 3.0_dp
-        !     u_out_u(nsym(2,2)) = u_out_u(nsym(2,2)) - trace / 3.0_dp
-        !     ! No need to do
-        !     !   u_out_u(nsym(3,3)) = u_out_u(nsym(3,3)) - trace / 3.0_dp
-        !     ! as it doesn't get used.
-            
-        !     ! No need to write to rhs_vfieldxx(:,:,:,6) as it is not used.
-        !     do n = 1, 5
-        !         rhs_vfieldxx(iyy,izz,ixx,n) = u_out_u(n)
-        !     end do
-        ! _loop_phys_end
-
-        ! do n = 1,5
-        !     call fftw_sx2k(rhs_vfieldxx(:,:,:,n), rhs_vfieldk(:,:,:,n))
-        ! end do
-
-        ! ! Get one element on the diagonal from the tracelessness
-        ! rhs_vfieldk(:,:,:,nsym(3,3)) = &
-        !     -(rhs_vfieldk(:,:,:,nsym(1,1)) + rhs_vfieldk(:,:,:,nsym(2,2)))
-
         ! get 6 velocity products:
         _loop_phys_begin
 
             do n = 1, 6
-                u_out_u(n) = vel_vfieldxx(iyy,izz,ixx,isym(n)) &
+                rhs_vfieldxx(iyy,izz,ixx,n) = = vel_vfieldxx(iyy,izz,ixx,isym(n)) &
                                 * vel_vfieldxx(iyy,izz,ixx,jsym(n))
-            end do
-
-            do n = 1, 6
-                rhs_vfieldxx(iyy,izz,ixx,n) = u_out_u(n)
             end do
         _loop_phys_end
 
@@ -94,14 +56,11 @@ module rhs
 
             end do
 
-            advect_ = 0
-
             ! Pressure terms
             div = 0
             do n = 1, 3
                 div = div + vfield_coordinatek(ix,iy,iz,n) * advect(n)
             end do
-            div = div + advect_
 
             do n = 1, 3
                 fvel_vfieldk(ix,iy,iz,n) = advect(n) &
