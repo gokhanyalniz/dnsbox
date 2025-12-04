@@ -19,13 +19,47 @@ module rhs
         complex(dpc), intent(out) :: fvel_vfieldk(:, :, :, :)
 
         complex(dpc) :: rhs_vfieldk(nx_perproc, ny_half, nz, 6), advect(3), advect_, div
-        real(dp) :: rhs_vfieldxx(nyy, nzz_perproc, nxx, 5), u_out_u(6), trace
+        real(dp) :: rhs_vfieldxx(nyy, nzz_perproc, nxx, 6), u_out_u(6), trace
+        ! 6 rather than 5 with Basdevant /g 251204
 
         integer(i4) :: n, i, j
 
         _indices
         _indicess
+
+        ! Disabling Basdevant complication /g 251204
     
+        ! ! get 6 velocity products:
+        ! _loop_phys_begin
+
+        !     do n = 1, 6
+        !         u_out_u(n) = vel_vfieldxx(iyy,izz,ixx,isym(n)) &
+        !                         * vel_vfieldxx(iyy,izz,ixx,jsym(n))
+        !     end do
+
+        !     ! Basdevant 1983, subtract the trace
+        !     trace = u_out_u(nsym(1,1)) + u_out_u(nsym(2,2)) &
+        !                                         + u_out_u(nsym(3,3))
+        !     u_out_u(nsym(1,1)) = u_out_u(nsym(1,1)) - trace / 3.0_dp
+        !     u_out_u(nsym(2,2)) = u_out_u(nsym(2,2)) - trace / 3.0_dp
+        !     ! No need to do
+        !     !   u_out_u(nsym(3,3)) = u_out_u(nsym(3,3)) - trace / 3.0_dp
+        !     ! as it doesn't get used.
+            
+        !     ! No need to write to rhs_vfieldxx(:,:,:,6) as it is not used.
+        !     do n = 1, 5
+        !         rhs_vfieldxx(iyy,izz,ixx,n) = u_out_u(n)
+        !     end do
+        ! _loop_phys_end
+
+        ! do n = 1,5
+        !     call fftw_sx2k(rhs_vfieldxx(:,:,:,n), rhs_vfieldk(:,:,:,n))
+        ! end do
+
+        ! ! Get one element on the diagonal from the tracelessness
+        ! rhs_vfieldk(:,:,:,nsym(3,3)) = &
+        !     -(rhs_vfieldk(:,:,:,nsym(1,1)) + rhs_vfieldk(:,:,:,nsym(2,2)))
+
         ! get 6 velocity products:
         _loop_phys_begin
 
@@ -34,28 +68,14 @@ module rhs
                                 * vel_vfieldxx(iyy,izz,ixx,jsym(n))
             end do
 
-            ! Basdevant 1983, subtract the trace
-            trace = u_out_u(nsym(1,1)) + u_out_u(nsym(2,2)) &
-                                                + u_out_u(nsym(3,3))
-            u_out_u(nsym(1,1)) = u_out_u(nsym(1,1)) - trace / 3.0_dp
-            u_out_u(nsym(2,2)) = u_out_u(nsym(2,2)) - trace / 3.0_dp
-            ! No need to do
-            !   u_out_u(nsym(3,3)) = u_out_u(nsym(3,3)) - trace / 3.0_dp
-            ! as it doesn't get used.
-            
-            ! No need to write to rhs_vfieldxx(:,:,:,6) as it is not used.
-            do n = 1, 5
+            do n = 1, 6
                 rhs_vfieldxx(iyy,izz,ixx,n) = u_out_u(n)
             end do
         _loop_phys_end
 
-        do n = 1,5
+        do n = 1,6
             call fftw_sx2k(rhs_vfieldxx(:,:,:,n), rhs_vfieldk(:,:,:,n))
         end do
-
-        ! Get one element on the diagonal from the tracelessness
-        rhs_vfieldk(:,:,:,nsym(3,3)) = &
-            -(rhs_vfieldk(:,:,:,nsym(1,1)) + rhs_vfieldk(:,:,:,nsym(2,2)))
         
         ! Now rhs_vfieldk(:,:,:,:, 1:6) holds the products uu, uv, uw, ...
         ! in Fourier space.  

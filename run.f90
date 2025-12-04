@@ -20,12 +20,10 @@ module run
     complex(dpc), allocatable, dimension(:, :, :, :) :: &
         vel_vfieldk_now, fvel_vfieldk_now! u and F(u) now
 
-    real(dp), allocatable :: vel_vfieldxx_now(:, :, :, :) !, vel_vfieldx_now(:, :, :, :)
+    real(dp), allocatable :: vel_vfieldxx_now(:, :, :, :)
 
-    integer(i4) :: laminarized_ch
     logical     :: kill_switch = .false.
 
-    real(dp) :: e_diff, input_diff, diss_diff
     contains
     
     subroutine run_init
@@ -39,8 +37,6 @@ module run
         allocate(vel_vfieldk_now(nx_perproc, ny_half, nz, 3))
         allocate(fvel_vfieldk_now(nx_perproc, ny_half, nz, 3))
         allocate(vel_vfieldxx_now(nyy, nzz_perproc, nxx, 3))
-
-        ! if (i_save_phys > 0) allocate(vel_vfieldx_now(ny, nz_perproc, nx, 3))
 
         ! Initial time
         itime = i_start
@@ -87,18 +83,6 @@ module run
         stop
 
     end subroutine run_exit
-
-!==============================================================================
-
-    subroutine run_flush_channels
-        ! Flush text with every state file save
-        flush(out)
-        if (my_id == 0) then
-            if (stats_stat_written) flush(stats_stat_ch)
-            if (stats_frac_written) flush(stats_frac_ch)
-            if (steps_written) flush(steps_ch)
-        end if
-    end subroutine run_flush_channels
 
 !==============================================================================
 

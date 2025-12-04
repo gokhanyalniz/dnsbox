@@ -25,35 +25,24 @@ module parameters
     real(dp) :: Re = 630.0_dp
 
     !# Initiation
-    integer(i4) :: IC = -1, &     ! Initial condition 
-                               ! (-3 shapiro, -2 laminar, -1 random, 
+    integer(i4) :: IC = 0, &   ! Initial condition 
                                !   0 state.{istart / i_save_fields)
                    i_start = 0 ! Starting time step  
-    integer(i8) :: random_seed = -1 ! -1 reads from /dev/urandom
-    real(dp) :: random_energy = 0.1_dp, & ! (ekin_laminar) energy of the random IC
-                random_smooth = 0.9_dp, & ! smoothness factor for random IC
-                t_start = 0 ! Starting time
+    real(dp) :: t_start = 0 ! Starting time
     
     !# Results -- note i_* convention for variables in time step units
     integer(i4) :: i_print_stats = 20, &   ! Print energy, dissipation etc.
-                   i_print_steps = 20, &   ! Print Courant, step error etc.
-                   i_save_fields = 2000, & ! Save fields (restart files)
-                   i_flush = -1, &
-                   i_save_phys = -1
+                   i_print_steps = 20, &   ! Print step error etc.
+                   i_save_fields = 2000 ! Save fields (restart files)
 
     !# Time stepping 
     real(dp)    :: dt = 0.025_dp, &
                    implicitness = 0.5_dp, &
                    steptol = 1.0e-9_dp, &
-                   dtmax = 0.1_dp, &
-                   courant_target = 0.25_dp
+                   dtmax = 0.1_dp
     integer(i4) :: ncorr = 10 
-    logical :: adaptive_dt = .true.
     
     !# Termination
-    logical  :: terminate_laminar = .true. ! terminate on laminarization
-    real(dp) :: relerr_lam = 0.1_dp ! conclude laminarization if stats within
-                                       ! relerr_lam of those of laminar
     real(sp) :: wall_clock_limit = -1.0_sp
     integer(i4) :: i_finish = -1 ! time step limit
 
@@ -64,7 +53,7 @@ module parameters
                    kF ! forcing wave number
 
     ! laminar values
-    real(dp) :: ekin_lam, powerin_lam, dissip_lam
+    real(dp) :: ekin_lam
 
     ! forcing coefficient
     real(dp) :: amp
@@ -76,13 +65,11 @@ module parameters
 
     namelist /grid/ nx, ny, nz, Lx, Lz
     namelist /physics/ forcing, Re
-    namelist /initiation/ IC, random_seed, random_energy, random_smooth, &
-                          t_start, i_start
-    namelist /output/ i_print_stats, i_print_steps, i_save_fields, &
-                      i_flush, i_save_phys
-    namelist /time_stepping/ dt, implicitness, steptol, ncorr, adaptive_dt, &
-                             dtmax, courant_target
-    namelist /termination/ terminate_laminar, relerr_lam, wall_clock_limit, i_finish
+    namelist /initiation/ IC, t_start, i_start
+    namelist /output/ i_print_stats, i_print_steps, i_save_fields
+    namelist /time_stepping/ dt, implicitness, steptol, ncorr, &
+                             dtmax
+    namelist /termination/ wall_clock_limit, i_finish
 
     contains 
 
@@ -192,13 +179,6 @@ module parameters
             error stop
         end if
 
-        if (i_save_phys > 0 .and. nz_perproc <= 1) then
-            write(out, *) '*** num_procs too large:', num_procs, & 
-                          '*** nz_perproc:', nz_perproc
-            flush(out)
-            error stop
-        end if
-
         write(out, '(79(''=''))')
 
         ! ---------------------------------------------------------------------
@@ -222,17 +202,12 @@ module parameters
 
         ! compute laminar values
         ekin_lam    = 1.0_dp / 4.0_dp
-        powerin_lam = amp / (8 * Re)
-        dissip_lam  = powerin_lam
         
         write(out, '(79(''=''))')
 
         ! ---------------------------------------------------------------------  
 
         write(out, *) 'IC = ', IC
-        write(out, *) 'random_seed = ', random_seed
-        write(out, *) 'random_energy = ', random_energy
-        write(out, *) 'random_smooth = ', random_smooth
         
         write(out, '(79(''=''))')
                        
@@ -243,8 +218,6 @@ module parameters
         write(out, *) 'i_print_stats = ', i_print_stats
         write(out, *) 'i_print_steps = ', i_print_steps
         write(out, *) 'i_save_fields = ', i_save_fields
-        write(out, *) 'i_flush = ', i_flush
-        write(out, *) 'i_save_phys = ', i_save_phys
 
         write(out, '(79(''=''))')
         
@@ -254,16 +227,12 @@ module parameters
         write(out, *) 'implicitness = ', implicitness
         write(out, *) 'steptol = ', steptol
         write(out, *) 'ncorr = ', ncorr
-        write(out, *) 'adaptive_dt = ', adaptive_dt
         write(out, *) 'dtmax = ', dtmax
-        write(out, *) 'courant_target = ', courant_target
 
         write(out, '(79(''=''))')
         
         ! ---------------------------------------------------------------------
 
-        write(out, *) 'terminate_laminar = ', terminate_laminar
-        write(out, *) 'relerr_lam = ', relerr_lam
         write(out, *) 'wall_clock_limit = ', wall_clock_limit
         write(out, *) 'i_finish = ', i_finish
 

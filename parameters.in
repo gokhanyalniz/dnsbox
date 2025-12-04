@@ -12,11 +12,7 @@ Re         = 630.0 ! Reynolds number
 /
 
 &initiation
-IC            = -1  ! -2: Laminar, -1: Random, N: state.00000N
-random_seed   = 1   ! -1: Read seed number from /dev/urandom for random IC
-                    !     otherwise start with seed random_seed
-random_energy = 0.1 ! Random ICs have energy random_energy * eLaminar
-random_smooth = 0.9 ! Smoothness factor for random ICs
+IC            = 0  ! N: state.00000N
 t_start       = 0.0 ! Initial time
 i_start       = 0   ! Initial time step
 /
@@ -25,9 +21,7 @@ i_start       = 0   ! Initial time step
 i_print_stats        = 50   ! How often to compute and write statistics
 i_print_steps        = 50   ! How often to write time stepper data
 i_save_fields        = 500	! How often to save state files to disk
-i_save_phys          =      ! How often to save physical space files to disk
 i_save_sliced_fields = -1	! How often to save sliced state files to disk
-i_flush   = -1              ! How often to force flush textual data
 /
 
 &time_stepping
@@ -35,14 +29,10 @@ dt             = 0.025       ! Size of time steps
 implicitness   = 0.5        ! Implicitness of the predictor-corrector
 steptol        = 1.0e-9     ! Tolerance in predictor-corrector
 ncorr          = 10         ! Maximum number of corrector steps
-adaptive_dt    = T          ! T: Enable dynamic timestep sizes
 dtmax          = 0.1        ! Maximum size of time steps
-courant_target = 0.25       ! Courant number to target
 /
 
 &termination
-terminate_laminar = T     ! Terminate (T) or not (F) when laminarized
-relerr_lam = 0.1          ! relerr for deciding laminar
 wall_clock_limit = -1     ! if negative, unlimited (seconds)
 i_finish = -1             ! If positive, the run will stop after itime=i_finish
 /

@@ -11,7 +11,7 @@ module timestep
     use rhs
 
     integer(i4) :: ncorr_last = 1
-    real(dp)    :: error_last = 0, courant
+    real(dp)    :: error_last = 0
 
     integer(i4)    :: steps_ch
     character(255) :: steps_file = 'steps.gp'
@@ -120,42 +120,6 @@ module timestep
 
 !==============================================================================
 
-    subroutine timestep_set_dt
-        
-        dt = (courant_target / courant) * dt
-        
-        if (dtmax > 0 .and. dt > dtmax) then
-            dt = dtmax
-            courant = courant * dtmax / dt
-        else
-            courant = courant_target
-        end if
-        
-    end subroutine timestep_set_dt
-
-!==============================================================================
-
-    subroutine timestep_courant(vfieldxx)
-        real(dp), intent(in) :: vfieldxx(:, :, :, :)
-        real(dp) :: sfieldxx(nyy, nzz_perproc, nxx)
-        real(dp) :: my_courant
-
-        sfieldxx(:, :, :) = abs(vfieldxx(:,:,:,1)) * dt / dx &
-                                + abs(vfieldxx(:,:,:,2)) * dt / dy &
-                                + abs(vfieldxx(:,:,:,3)) * dt / dz
-        my_courant = maxval(sfieldxx(:, :, :))
-        if (.not. adaptive_dt) then 
-            call MPI_REDUCE(&
-            my_courant,courant,1,MPI_REAL8,MPI_MAX,0,MPI_COMM_WORLD,mpi_err)
-        else
-            call MPI_ALLREDUCE(&
-            my_courant,courant,1,MPI_REAL8,MPI_MAX,MPI_COMM_WORLD,mpi_err)
-        end if
-
-    end subroutine timestep_courant
-
-!==============================================================================
-
     subroutine timestep_write
         
         ! outputting statistics
@@ -168,13 +132,13 @@ module timestep
             if (.not.there) then
             open(newunit=steps_ch,file=TRIM(steps_file),form='formatted')
                 write(steps_ch,"(A2,"//i4_len//","//"4"//sp_len//","//i4_len//")") &
-                    "# ", "itime", "time", "dt", "courant", "err_corr", "ncorr"
+                    "# ", "itime", "time", "dt", "err_corr", "ncorr"
             end if
             if(there.and..not.there2) then
             open(newunit=steps_ch,file=TRIM(steps_file),position='append')
             end if
             write(steps_ch,"(A2,"//i4_f//","//"4"//sp_f//","//i4_f//")")&
-                "  ", itime, time, dt, courant, error_last, ncorr_last
+                "  ", itime, time, dt, error_last, ncorr_last
 
            steps_written = .true.
 
